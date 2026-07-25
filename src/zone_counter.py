@@ -18,6 +18,25 @@ import math
 import time
 
 
+def zone_polygon(p1, p2, width):
+    """4 pontos (em ordem) do retangulo formado ao redor do segmento p1-p2,
+    com margem perpendicular de 'width' pixels para cada lado - usado so
+    para desenhar a zona na tela; a checagem real usa distancia ao
+    segmento (_point_segment_distance), nao esse poligono.
+    """
+    x1, y1 = p1
+    x2, y2 = p2
+    dx, dy = x2 - x1, y2 - y1
+    length = math.hypot(dx, dy) or 1.0
+    nx, ny = -dy / length * width, dx / length * width
+    return [
+        (x1 + nx, y1 + ny),
+        (x2 + nx, y2 + ny),
+        (x2 - nx, y2 - ny),
+        (x1 - nx, y1 - ny),
+    ]
+
+
 def _point_segment_distance(p1, p2, point):
     """Distancia do ponto ao segmento de reta p1-p2 (nao a reta infinita)."""
     x1, y1 = p1

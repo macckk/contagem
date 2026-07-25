@@ -26,6 +26,7 @@ import sys
 from pathlib import Path
 
 import cv2
+import numpy as np
 from ultralytics import YOLO
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -34,7 +35,16 @@ from src.line_crossing import LineCrossingCounter
 from src.night_mode import prepare_frame_for_detection
 from src.rtsp_client import RTSPClient
 from src.supabase_client import insert_event
-from src.zone_counter import ZoneCooldownCounter
+from src.zone_counter import ZoneCooldownCounter, zone_polygon
+
+
+def draw_zone(frame, p1, p2, width_px, color):
+    """Desenha a faixa (retangulo translucido) usada na contagem noturna por zona."""
+    poly = np.array(zone_polygon(p1, p2, width_px), dtype=np.int32)
+    overlay = frame.copy()
+    cv2.fillPoly(overlay, [poly], color)
+    cv2.addWeighted(overlay, 0.18, frame, 0.82, 0, frame)
+    cv2.polylines(frame, [poly], isClosed=True, color=color, thickness=1)
 
 
 def main():
@@ -175,6 +185,8 @@ def main():
                     cv2.line(annotated, *draw_veiculos, (255, 0, 255), 2)
                 if draw_veiculos_noite:
                     cv2.line(annotated, *draw_veiculos_noite, (255, 255, 0), 2)
+                if is_night and counters_veiculos_noite is not None:
+                    draw_zone(annotated, *line_veiculos_noite, config.NIGHT_ZONE_WIDTH_PX, (255, 255, 0))
                 texto = f"Pessoas: {counter_pessoas.total}"
                 if counters_veiculos_dia is not None:
                     total_veiculos = sum(

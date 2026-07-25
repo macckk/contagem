@@ -205,7 +205,10 @@ Pessoas não são afetadas por essa mudança, só veículos.
 A zona noturna usa a linha `LINE_VEICULOS_NOITE_*` se calibrada (ver seção
 de calibração acima), ou cai para a linha de veículos do dia (`LINE_VEICULOS_*`)
 como padrão. Na janela de vídeo, a linha noturna aparece em ciano quando
-diferente da linha do dia (magenta).
+diferente da linha do dia (magenta), e a faixa em si (`NIGHT_ZONE_WIDTH_PX`
+pixels para cada lado da linha) aparece desenhada como um retângulo
+translúcido — só durante o modo noite — pra facilitar ver exatamente a
+área usada na contagem.
 
 ## Estrutura
 
