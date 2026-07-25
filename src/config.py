@@ -22,6 +22,13 @@ DEVICE = os.getenv("DEVICE", "") or None
 CONF_THRESHOLD = float(os.getenv("CONF_THRESHOLD", "0.4"))
 FRAME_SKIP = max(1, int(os.getenv("FRAME_SKIP", "1")))
 
+# Tamanho da imagem usado na inferencia. O YOLO redimensiona o frame para
+# este valor antes de detectar; o padrao da Ultralytics (640) pode fundir
+# veiculos proximos numa unica caixa (as vezes classificada errado como
+# "truck"). Um valor maior preserva mais detalhe, ao custo de mais
+# processamento.
+IMGSZ = int(os.getenv("IMGSZ", "640"))
+
 # IDs de classe no dataset COCO, em que o YOLOv8 padrao foi treinado.
 PERSON_CLASS_ID = 0
 VEHICLE_CLASS_IDS = {

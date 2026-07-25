@@ -47,6 +47,7 @@ def main():
                 classes=[config.PERSON_CLASS_ID],
                 conf=config.CONF_THRESHOLD,
                 device=config.DEVICE,
+                imgsz=config.IMGSZ,
                 verbose=False,
             )
             annotated = results[0].plot()

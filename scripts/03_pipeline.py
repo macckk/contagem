@@ -91,6 +91,7 @@ def main():
                 classes=classes,
                 conf=config.CONF_THRESHOLD,
                 device=config.DEVICE,
+                imgsz=config.IMGSZ,
                 tracker="bytetrack.yaml",
                 persist=True,
                 verbose=False,
