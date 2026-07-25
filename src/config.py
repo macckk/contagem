@@ -29,6 +29,20 @@ FRAME_SKIP = max(1, int(os.getenv("FRAME_SKIP", "1")))
 # processamento.
 IMGSZ = int(os.getenv("IMGSZ", "640"))
 
+# Modo noite: a noite, farois acesos estouram o brilho e escondem a
+# carroceria do veiculo, derrubando a confianca do YOLO. Essa camera (e
+# varias outras Yoosee/HiIpCamera) muda pra modo infravermelho P&B a noite,
+# o que deixa o brilho medio do frame ENGANOSAMENTE alto (o IV ilumina a
+# cena e reflete no asfalto molhado) - por isso o sinal mais confiavel de
+# "noite" e a saturacao de cor quase zero (imagem monocromatica), nao o
+# brilho. O brilho baixo fica como sinal secundario, para cameras sem modo
+# IR que simplesmente escurecem.
+ENABLE_NIGHT_MODE = os.getenv("ENABLE_NIGHT_MODE", "true").strip().lower() in ("1", "true", "yes")
+NIGHT_SATURATION_THRESHOLD = float(os.getenv("NIGHT_SATURATION_THRESHOLD", "20"))
+NIGHT_LUMINANCE_THRESHOLD = float(os.getenv("NIGHT_LUMINANCE_THRESHOLD", "70"))
+NIGHT_CONF_THRESHOLD = float(os.getenv("NIGHT_CONF_THRESHOLD", "0.25"))
+NIGHT_CLAHE_CLIP_LIMIT = float(os.getenv("NIGHT_CLAHE_CLIP_LIMIT", "2.5"))
+
 # IDs de classe no dataset COCO, em que o YOLOv8 padrao foi treinado.
 PERSON_CLASS_ID = 0
 VEHICLE_CLASS_IDS = {

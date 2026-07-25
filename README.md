@@ -132,6 +132,27 @@ contagem manual.
 - `IMGSZ`: tamanho de imagem usado na inferência (padrão `640`). Um valor maior (ex: `960`) reduz a fusão de veículos próximos numa única detecção classificada errado, ao custo de mais processamento.
 - `DEVICE`: vazio = auto, `0`/`1` = escolher GPU específica, `cpu` = forçar CPU.
 
+### Modo noite
+
+A câmera muda para infravermelho preto-e-branco à noite, e os faróis
+acesos estouram o brilho e escondem a carroceria dos veículos — o que
+derruba bastante a confiança do YOLO (treinado majoritariamente em imagens
+diurnas coloridas). `src/night_mode.py` detecta automaticamente esse modo
+(pela saturação de cor do frame, quase zero em P&B — o brilho médio sozinho
+engana aqui, porque o IV ilumina a cena e reflete no chão molhado, ficando
+alto mesmo de noite) e, quando ativo:
+
+1. Aplica um leve desfoque + realce de contraste (CLAHE) no frame antes da
+   detecção, para reduzir o ruído granulado do modo IR e destacar melhor a
+   silhueta do veículo nas partes não totalmente estouradas pelo farol.
+2. Usa um limiar de confiança mais baixo (`NIGHT_CONF_THRESHOLD`, padrão
+   `0.25`, vs. `CONF_THRESHOLD` de dia).
+
+Variáveis: `ENABLE_NIGHT_MODE` (padrão `true`), `NIGHT_SATURATION_THRESHOLD`
+(padrão `20`), `NIGHT_LUMINANCE_THRESHOLD` (sinal secundário, para câmeras
+sem modo IR), `NIGHT_CONF_THRESHOLD`, `NIGHT_CLAHE_CLIP_LIMIT`. Quando
+ativo, aparece `[modo noite]` ao lado dos contadores na tela.
+
 ## Estrutura
 
 ```
@@ -140,6 +161,7 @@ src/
   rtsp_client.py       # cliente RTSP/TCP proprio + decode H.264 (PyAV)
   supabase_client.py   # insert de eventos
   line_crossing.py     # lógica de cruzamento de linha / dedupe
+  night_mode.py        # deteccao dia/noite + realce de contraste noturno
 scripts/
   01_captura.py         # Fase 1
   calibrar_linha.py     # calibração da linha de contagem

@@ -23,6 +23,7 @@ from ultralytics import YOLO
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from src import config
 from src.line_crossing import LineCrossingCounter
+from src.night_mode import prepare_frame_for_detection
 from src.rtsp_client import RTSPClient
 
 CLASS_NAMES = {config.PERSON_CLASS_ID: "person", **config.VEHICLE_CLASS_IDS}
@@ -91,10 +92,12 @@ def main():
             if frame_idx % config.FRAME_SKIP != 0:
                 continue
 
+            detect_frame, is_night, conf_threshold = prepare_frame_for_detection(frame)
+
             result = model.track(
-                frame,
+                detect_frame,
                 classes=classes,
-                conf=config.CONF_THRESHOLD,
+                conf=conf_threshold,
                 device=config.DEVICE,
                 imgsz=config.IMGSZ,
                 tracker="bytetrack.yaml",
@@ -135,6 +138,8 @@ def main():
             if counters_veiculos is not None:
                 total_veiculos = sum(c.total for c in counters_veiculos.values())
                 texto += f"   Veiculos: {total_veiculos}"
+            if is_night:
+                texto += "   [modo noite]"
             cv2.putText(
                 annotated,
                 texto,
