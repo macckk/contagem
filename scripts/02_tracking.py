@@ -31,6 +31,8 @@ def main():
         )
     p1, p2 = line
     counter = LineCrossingCounter(p1, p2, entrada_side=config.ENTRADA_SIDE)
+    p1_draw = (int(p1[0]), int(p1[1]))
+    p2_draw = (int(p2[0]), int(p2[1]))
 
     model = YOLO(config.MODEL_PATH)
 
@@ -61,7 +63,7 @@ def main():
             )[0]
 
             annotated = result.plot()
-            cv2.line(annotated, p1, p2, (0, 255, 255), 2)
+            cv2.line(annotated, p1_draw, p2_draw, (0, 255, 255), 2)
 
             boxes = result.boxes
             if boxes is not None and boxes.id is not None:

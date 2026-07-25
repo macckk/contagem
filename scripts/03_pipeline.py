@@ -38,6 +38,8 @@ def main():
         )
     p1, p2 = line
     counter = LineCrossingCounter(p1, p2, entrada_side=config.ENTRADA_SIDE)
+    p1_draw = (int(p1[0]), int(p1[1]))
+    p2_draw = (int(p2[0]), int(p2[1]))
 
     model = YOLO(config.MODEL_PATH)
 
@@ -85,7 +87,7 @@ def main():
 
             if not args.headless:
                 annotated = result.plot()
-                cv2.line(annotated, p1, p2, (0, 255, 255), 2)
+                cv2.line(annotated, p1_draw, p2_draw, (0, 255, 255), 2)
                 cv2.putText(
                     annotated,
                     f"Entrada: {counter.total_entrada}  Saida: {counter.total_saida}",

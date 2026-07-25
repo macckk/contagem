@@ -3,6 +3,7 @@ opencv-python>=4.9.0
 python-dotenv>=1.0.1
 supabase>=2.4.0
 av>=13.0.0
+lap>=0.5.12
 
 # Instale o torch separadamente com suporte a CUDA para usar a GPU, por exemplo:
 #   pip install torch --index-url https://download.pytorch.org/whl/cu121
