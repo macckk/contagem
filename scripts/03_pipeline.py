@@ -1,11 +1,19 @@
 """Fase 3/4 - Pipeline completo: tracking + linha + insercao no Supabase.
 
-Igual a Fase 2, mas cada cruzamento (de pessoa ou, se calibrada, de veiculo -
-independente de direcao) vira um insert na tabela contagem_eventos do
-Supabase (ver sql/schema.sql), marcado com tipo='pessoa' ou com o tipo
-especifico de veiculo ('car', 'motorcycle', 'bus', 'truck', 'bicycle').
-Suporta modo headless (sem janela) para deixar rodando durante o teste de
-campo (Fase 4).
+Igual a Fase 2, mas cada evento contado (de pessoa ou, se calibrada, de
+veiculo - independente de direcao) vira um insert na tabela
+contagem_eventos do Supabase (ver sql/schema.sql), marcado com tipo='pessoa'
+ou com o tipo especifico de veiculo ('car', 'motorcycle', 'bus', 'truck',
+'bicycle'). Suporta modo headless (sem janela) para deixar rodando durante
+o teste de campo (Fase 4).
+
+De dia, veiculos sao contados por cruzamento de linha (LineCrossingCounter).
+A noite, a deteccao fica intermitente (ruido do modo IR + desfoque de
+movimento) e o tracking raramente sobrevive ao cruzamento completo - por
+isso, a noite, veiculos sao contados por zona + cooldown
+(src/zone_counter.py): basta a deteccao aparecer perto da linha com
+confianca alta (NIGHT_ZONE_MIN_CONF), e um cooldown espaco-temporal evita
+contar o mesmo veiculo 2x quando o track_id fragmenta.
 
 Uso:
     python scripts/03_pipeline.py             # com janela
@@ -26,6 +34,7 @@ from src.line_crossing import LineCrossingCounter
 from src.night_mode import prepare_frame_for_detection
 from src.rtsp_client import RTSPClient
 from src.supabase_client import insert_event
+from src.zone_counter import ZoneCooldownCounter
 
 
 def main():
@@ -46,12 +55,22 @@ def main():
     draw_pessoas = tuple((int(p[0]), int(p[1])) for p in line_pessoas)
 
     line_veiculos = config.get_line_veiculos()
-    counters_veiculos = None
+    counters_veiculos_dia = None
+    counters_veiculos_noite = None
     draw_veiculos = None
     classes = [config.PERSON_CLASS_ID]
     if line_veiculos is not None:
-        counters_veiculos = {
+        counters_veiculos_dia = {
             nome: LineCrossingCounter(*line_veiculos) for nome in config.VEHICLE_CLASS_IDS.values()
+        }
+        counters_veiculos_noite = {
+            nome: ZoneCooldownCounter(
+                *line_veiculos,
+                zone_width=config.NIGHT_ZONE_WIDTH_PX,
+                cooldown_seconds=config.NIGHT_ZONE_COOLDOWN_SECONDS,
+                dedupe_distance=config.NIGHT_ZONE_DEDUPE_DISTANCE_PX,
+            )
+            for nome in config.VEHICLE_CLASS_IDS.values()
         }
         draw_veiculos = tuple((int(p[0]), int(p[1])) for p in line_veiculos)
         classes += list(config.VEHICLE_CLASS_IDS)
@@ -60,6 +79,11 @@ def main():
             "Linha de veiculos nao calibrada (LINE_VEICULOS_*) - contando so pessoas. "
             "Rode 'python scripts/calibrar_linha.py --alvo veiculos' para habilitar."
         )
+
+    def total_veiculos_tipo(nome):
+        dia = counters_veiculos_dia[nome].total
+        noite = counters_veiculos_noite[nome].total
+        return dia + noite
 
     model = YOLO(config.MODEL_PATH)
 
@@ -111,21 +135,33 @@ def main():
                     if track_id not in track_tipo:
                         if cls_id == config.PERSON_CLASS_ID:
                             track_tipo[track_id] = "pessoa"
-                        elif counters_veiculos is not None and cls_id in config.VEHICLE_CLASS_IDS:
+                        elif counters_veiculos_dia is not None and cls_id in config.VEHICLE_CLASS_IDS:
                             track_tipo[track_id] = config.VEHICLE_CLASS_IDS[cls_id]
                         else:
                             continue
                     tipo = track_tipo[track_id]
-                    counter = counter_pessoas if tipo == "pessoa" else counters_veiculos[tipo]
 
-                    if counter.update(track_id, xyxy):
+                    if tipo == "pessoa":
+                        crossed = counter_pessoas.update(track_id, xyxy)
+                        total = counter_pessoas.total
+                    elif is_night:
+                        if conf < config.NIGHT_ZONE_MIN_CONF:
+                            continue
+                        crossed = counters_veiculos_noite[tipo].update(track_id, xyxy)
+                        total = total_veiculos_tipo(tipo)
+                    else:
+                        crossed = counters_veiculos_dia[tipo].update(track_id, xyxy)
+                        total = total_veiculos_tipo(tipo)
+
+                    if crossed:
                         try:
                             insert_event(track_id, conf, tipo=tipo)
                         except Exception as exc:
                             print(f"Falha ao inserir no Supabase: {exc}")
+                        origem = "zona-noite" if (tipo != "pessoa" and is_night) else "linha"
                         print(
-                            f"{tipo} track_id={track_id} conf={conf:.2f} -> cruzou "
-                            f"(total {tipo}: {counter.total})"
+                            f"{tipo} track_id={track_id} conf={conf:.2f} -> contado "
+                            f"({origem}, total {tipo}: {total})"
                         )
 
             if not args.headless:
@@ -134,8 +170,10 @@ def main():
                 if draw_veiculos:
                     cv2.line(annotated, *draw_veiculos, (255, 0, 255), 2)
                 texto = f"Pessoas: {counter_pessoas.total}"
-                if counters_veiculos is not None:
-                    total_veiculos = sum(c.total for c in counters_veiculos.values())
+                if counters_veiculos_dia is not None:
+                    total_veiculos = sum(
+                        total_veiculos_tipo(n) for n in config.VEHICLE_CLASS_IDS.values()
+                    )
                     texto += f"   Veiculos: {total_veiculos}"
                 if is_night:
                     texto += "   [modo noite]"
@@ -157,10 +195,14 @@ def main():
         cap.release()
         cv2.destroyAllWindows()
         print(f"\nTotal final -> Pessoas: {counter_pessoas.total}")
-        if counters_veiculos is not None:
-            for nome, counter in counters_veiculos.items():
-                print(f"  {nome}: {counter.total}")
-            print(f"  Total veiculos: {sum(c.total for c in counters_veiculos.values())}")
+        if counters_veiculos_dia is not None:
+            total_geral = 0
+            for nome in config.VEHICLE_CLASS_IDS.values():
+                dia = counters_veiculos_dia[nome].total
+                noite = counters_veiculos_noite[nome].total
+                total_geral += dia + noite
+                print(f"  {nome}: {dia + noite} (dia: {dia}, noite: {noite})")
+            print(f"  Total veiculos: {total_geral}")
 
 
 if __name__ == "__main__":

@@ -53,6 +53,20 @@ NIGHT_LUMINANCE_THRESHOLD = float(os.getenv("NIGHT_LUMINANCE_THRESHOLD", "70"))
 NIGHT_CONF_THRESHOLD = float(os.getenv("NIGHT_CONF_THRESHOLD", "0.25"))
 NIGHT_CLAHE_CLIP_LIMIT = float(os.getenv("NIGHT_CLAHE_CLIP_LIMIT", "2.5"))
 
+# Contagem de veiculos a noite por ZONA + cooldown (src/zone_counter.py),
+# em vez de exigir o cruzamento completo da linha (que falha quando o
+# tracking fragmenta por deteccao intermitente). So conta deteccoes com
+# confianca >= NIGHT_ZONE_MIN_CONF (mais alta que NIGHT_CONF_THRESHOLD,
+# que e so pra manter o tracking vivo) dentro de uma faixa de
+# NIGHT_ZONE_WIDTH_PX pixels ao redor da linha calibrada. Deteccoes do
+# mesmo tipo a menos de NIGHT_ZONE_DEDUPE_DISTANCE_PX pixels e dentro de
+# NIGHT_ZONE_COOLDOWN_SECONDS segundos sao tratadas como o mesmo veiculo
+# (evita contar 2x quando o track_id muda no meio da passagem).
+NIGHT_ZONE_MIN_CONF = float(os.getenv("NIGHT_ZONE_MIN_CONF", "0.55"))
+NIGHT_ZONE_WIDTH_PX = float(os.getenv("NIGHT_ZONE_WIDTH_PX", "60"))
+NIGHT_ZONE_COOLDOWN_SECONDS = float(os.getenv("NIGHT_ZONE_COOLDOWN_SECONDS", "4.0"))
+NIGHT_ZONE_DEDUPE_DISTANCE_PX = float(os.getenv("NIGHT_ZONE_DEDUPE_DISTANCE_PX", "80"))
+
 # IDs de classe no dataset COCO, em que o YOLOv8 padrao foi treinado.
 PERSON_CLASS_ID = 0
 VEHICLE_CLASS_IDS = {

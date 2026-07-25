@@ -172,6 +172,27 @@ execução. O trade-off é um risco levemente maior de troca de identidade
 sobrescrever com `TRACKER_CONFIG=<caminho>` no `.env` se quiser usar outro
 arquivo.
 
+### Contagem noturna por zona (`src/zone_counter.py`)
+
+Mesmo com o tracker mais tolerante, um veículo à noite pode nunca ser
+detectado nos dois lados da linha — o `LineCrossingCounter` exige isso e
+simplesmente não contaria nada. Por isso, **à noite, veículos são contados
+de outro jeito**: em vez de cruzamento de linha, conta a detecção assim
+que ela aparece dentro de uma faixa ao redor da linha (a "zona"), desde
+que a confiança seja alta o suficiente (`NIGHT_ZONE_MIN_CONF`, padrão
+`0.55` — mais exigente que o `NIGHT_CONF_THRESHOLD` usado só para manter o
+tracking vivo).
+
+O risco óbvio disso sozinho seria contar o mesmo veículo físico várias
+vezes (o tracking fragmentado gera `track_id`s diferentes para o mesmo
+carro passando). Por isso tem um **cooldown espaço-temporal**: uma nova
+detecção do mesmo tipo, perto (`NIGHT_ZONE_DEDUPE_DISTANCE_PX`, padrão `80`
+pixels) e logo em seguida (`NIGHT_ZONE_COOLDOWN_SECONDS`, padrão `4`
+segundos), é tratada como o mesmo veículo e ignorada.
+
+De dia continua tudo igual (cruzamento de linha via `LineCrossingCounter`).
+Pessoas não são afetadas por essa mudança, só veículos.
+
 ## Estrutura
 
 ```
@@ -181,6 +202,7 @@ src/
   supabase_client.py   # insert de eventos
   line_crossing.py     # lógica de cruzamento de linha / dedupe
   night_mode.py        # deteccao dia/noite + realce de contraste noturno
+  zone_counter.py      # contagem de veiculos a noite por zona + cooldown
 trackers/
   bytetrack_tolerante.yaml  # config do ByteTrack mais tolerante a deteccao intermitente
 scripts/
