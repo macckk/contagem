@@ -7,9 +7,12 @@ cruzaram - sem distinguir direcao. Nao grava nada no Supabase (isso e a Fase 3).
 
 Uso:
     python scripts/02_tracking.py
+    python scripts/02_tracking.py --debug  # mostra no console TODAS as deteccoes,
+                                            # nao so as que cruzam a linha
 
 Pressione 'x' na janela para encerrar (ou Ctrl+C no terminal).
 """
+import argparse
 import sys
 from pathlib import Path
 
@@ -21,8 +24,18 @@ from src import config
 from src.line_crossing import LineCrossingCounter
 from src.rtsp_client import RTSPClient
 
+CLASS_NAMES = {config.PERSON_CLASS_ID: "person", **config.VEHICLE_CLASS_IDS}
+
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="Mostra no console todas as deteccoes do frame (classe, confianca, track_id), nao so as que cruzam a linha",
+    )
+    args = parser.parse_args()
+
     if not config.RTSP_URL:
         raise SystemExit("RTSP_URL nao configurada. Copie .env.example para .env e preencha.")
 
@@ -88,6 +101,9 @@ def main():
                     boxes.xyxy.tolist(), boxes.id.tolist(), boxes.conf.tolist(), boxes.cls.tolist()
                 ):
                     cls_id = int(cls_id)
+                    if args.debug:
+                        nome = CLASS_NAMES.get(cls_id, f"classe_{cls_id}")
+                        print(f"[debug] {nome} track_id={int(track_id)} conf={conf:.2f}")
                     if cls_id == config.PERSON_CLASS_ID:
                         crossed = counter_pessoas.update(int(track_id), xyxy)
                         if crossed:
