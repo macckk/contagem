@@ -2,7 +2,8 @@
 
 Sistema de teste para contar pessoas que passam em frente a uma câmera IP,
 usando YOLOv8 + ByteTrack para detecção/tracking, com contagem única por
-`track_id` e direção (entrada/saída), gravando os eventos no Supabase.
+`track_id` (quem cruzou a faixa, sem distinguir direção), gravando os
+eventos no Supabase.
 
 Contexto completo do projeto e decisões já tomadas: ver o documento de
 planejamento original (fases, arquitetura, pendências).
@@ -53,7 +54,9 @@ usam esse cliente no lugar de `cv2.VideoCapture`.
 ## Banco de dados (Supabase)
 
 Rode `sql/schema.sql` no SQL editor do Supabase para criar a tabela
-`contagem_eventos` antes de usar a Fase 3.
+`contagem_eventos` antes de usar a Fase 3. Se você já tinha criado a tabela
+antes (com a coluna `direcao`), rode também
+`sql/migrations/001_remove_direcao.sql` para remove-la.
 
 ## Fases
 
@@ -77,19 +80,14 @@ Abre um frame da câmera; clique 2 pontos definindo a linha (deve ficar
 restrita à faixa de pedestres da calçada, evitando a via de carros). O
 script imprime `LINE_X1`/`LINE_Y1`/`LINE_X2`/`LINE_Y2` para colar no `.env`.
 
-A direção "entrada" é definida por `ENTRADA_SIDE` no `.env`
-(`neg_to_pos` ou `pos_to_neg`) — dependendo de qual lado da linha corresponde
-a "entrando" na calçada. Se sair invertido na prática (Fase 2), basta trocar
-esse valor.
-
 ### Fase 2 — tracking + linha (sem gravar nada)
 
 ```bash
 python scripts/02_tracking.py
 ```
 
-Mostra o vídeo com IDs de tracking, a linha calibrada e os contadores de
-entrada/saída na tela. Use para validar a lógica de cruzamento antes de
+Mostra o vídeo com IDs de tracking, a linha calibrada e o total de pessoas
+que já cruzaram na tela. Use para validar a lógica de cruzamento antes de
 gravar no banco.
 
 ### Fase 3/4 — pipeline completo (grava no Supabase)
@@ -100,7 +98,7 @@ python scripts/03_pipeline.py --headless  # sem janela, só console (teste de ca
 ```
 
 Cada cruzamento de linha gera um insert em `contagem_eventos`
-(`camera_id`, `track_id`, `direcao`, `confianca`, `timestamp`). Use o modo
+(`camera_id`, `track_id`, `confianca`, `timestamp`). Use o modo
 `--headless` para deixar rodando por algumas horas em horário de movimento e
 depois comparar o total agregado no Supabase com uma contagem manual.
 
@@ -118,7 +116,7 @@ src/
   config.py           # leitura do .env
   rtsp_client.py       # cliente RTSP/TCP proprio + decode H.264 (PyAV)
   supabase_client.py   # insert de eventos
-  line_crossing.py     # lógica de cruzamento de linha / direção / dedupe
+  line_crossing.py     # lógica de cruzamento de linha / dedupe
 scripts/
   01_captura.py         # Fase 1
   calibrar_linha.py     # calibração da linha de contagem
@@ -126,4 +124,5 @@ scripts/
   03_pipeline.py         # Fase 3/4
 sql/
   schema.sql             # schema do Supabase
+  migrations/            # alteracoes incrementais no schema ja existente
 ```

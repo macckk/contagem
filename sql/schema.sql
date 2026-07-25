@@ -2,7 +2,6 @@ create table contagem_eventos (
   id bigserial primary key,
   camera_id text not null,
   track_id integer not null,
-  direcao text not null check (direcao in ('entrada', 'saida')),
   confianca numeric,
   timestamp timestamptz not null default now()
 );

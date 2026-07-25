@@ -30,8 +30,6 @@ LINE_Y1 = _float_or_none(os.getenv("LINE_Y1"))
 LINE_X2 = _float_or_none(os.getenv("LINE_X2"))
 LINE_Y2 = _float_or_none(os.getenv("LINE_Y2"))
 
-ENTRADA_SIDE = os.getenv("ENTRADA_SIDE", "neg_to_pos")
-
 
 def get_line_points():
     """Retorna ((x1, y1), (x2, y2)) da linha de contagem, ou None se nao calibrada."""

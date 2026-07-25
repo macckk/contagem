@@ -1,8 +1,8 @@
 """Fase 2 - Tracking + linha de contagem.
 
 Usa model.track() (Ultralytics + ByteTrack) para manter IDs persistentes entre
-frames, desenha a linha de contagem calibrada e mostra os contadores de
-entrada/saida na tela. Nao grava nada no Supabase (isso e a Fase 3).
+frames, desenha a linha de contagem calibrada e mostra o total de pessoas que
+cruzaram (sem distinguir direcao). Nao grava nada no Supabase (isso e a Fase 3).
 
 Uso:
     python scripts/02_tracking.py
@@ -30,7 +30,7 @@ def main():
             "preencha LINE_X1/LINE_Y1/LINE_X2/LINE_Y2 no .env."
         )
     p1, p2 = line
-    counter = LineCrossingCounter(p1, p2, entrada_side=config.ENTRADA_SIDE)
+    counter = LineCrossingCounter(p1, p2)
     p1_draw = (int(p1[0]), int(p1[1]))
     p2_draw = (int(p2[0]), int(p2[1]))
 
@@ -70,13 +70,13 @@ def main():
                 for xyxy, track_id, conf in zip(
                     boxes.xyxy.tolist(), boxes.id.tolist(), boxes.conf.tolist()
                 ):
-                    direction = counter.update(int(track_id), xyxy)
-                    if direction:
-                        print(f"track_id={int(track_id)} conf={conf:.2f} -> {direction}")
+                    crossed = counter.update(int(track_id), xyxy)
+                    if crossed:
+                        print(f"track_id={int(track_id)} conf={conf:.2f} -> cruzou (total: {counter.total})")
 
             cv2.putText(
                 annotated,
-                f"Entrada: {counter.total_entrada}  Saida: {counter.total_saida}",
+                f"Total: {counter.total}",
                 (10, 30),
                 cv2.FONT_HERSHEY_SIMPLEX,
                 1,
@@ -90,7 +90,7 @@ def main():
     finally:
         cap.release()
         cv2.destroyAllWindows()
-        print(f"\nTotal final -> Entrada: {counter.total_entrada}  Saida: {counter.total_saida}")
+        print(f"\nTotal final: {counter.total}")
 
 
 if __name__ == "__main__":

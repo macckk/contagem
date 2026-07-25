@@ -1,8 +1,8 @@
 """Fase 3/4 - Pipeline completo: tracking + linha + insercao no Supabase.
 
-Igual a Fase 2, mas cada cruzamento vira um insert na tabela
-contagem_eventos do Supabase (ver sql/schema.sql). Suporta modo headless
-(sem janela) para deixar rodando durante o teste de campo (Fase 4).
+Igual a Fase 2, mas cada cruzamento (independente de direcao) vira um insert
+na tabela contagem_eventos do Supabase (ver sql/schema.sql). Suporta modo
+headless (sem janela) para deixar rodando durante o teste de campo (Fase 4).
 
 Uso:
     python scripts/03_pipeline.py             # com janela
@@ -37,7 +37,7 @@ def main():
             "preencha LINE_X1/LINE_Y1/LINE_X2/LINE_Y2 no .env."
         )
     p1, p2 = line
-    counter = LineCrossingCounter(p1, p2, entrada_side=config.ENTRADA_SIDE)
+    counter = LineCrossingCounter(p1, p2)
     p1_draw = (int(p1[0]), int(p1[1]))
     p2_draw = (int(p2[0]), int(p2[1]))
 
@@ -74,15 +74,15 @@ def main():
                 for xyxy, track_id, conf in zip(
                     boxes.xyxy.tolist(), boxes.id.tolist(), boxes.conf.tolist()
                 ):
-                    direction = counter.update(int(track_id), xyxy)
-                    if direction:
+                    crossed = counter.update(int(track_id), xyxy)
+                    if crossed:
                         try:
-                            insert_event(int(track_id), direction, conf)
+                            insert_event(int(track_id), conf)
                         except Exception as exc:
                             print(f"Falha ao inserir no Supabase: {exc}")
                         print(
-                            f"track_id={int(track_id)} conf={conf:.2f} -> {direction} "
-                            f"(Entrada: {counter.total_entrada}  Saida: {counter.total_saida})"
+                            f"track_id={int(track_id)} conf={conf:.2f} -> cruzou "
+                            f"(total: {counter.total})"
                         )
 
             if not args.headless:
@@ -90,7 +90,7 @@ def main():
                 cv2.line(annotated, p1_draw, p2_draw, (0, 255, 255), 2)
                 cv2.putText(
                     annotated,
-                    f"Entrada: {counter.total_entrada}  Saida: {counter.total_saida}",
+                    f"Total: {counter.total}",
                     (10, 30),
                     cv2.FONT_HERSHEY_SIMPLEX,
                     1,
@@ -103,7 +103,7 @@ def main():
     finally:
         cap.release()
         cv2.destroyAllWindows()
-        print(f"\nTotal final -> Entrada: {counter.total_entrada}  Saida: {counter.total_saida}")
+        print(f"\nTotal final: {counter.total}")
 
 
 if __name__ == "__main__":
