@@ -2,11 +2,13 @@
 
 Captura um unico frame do RTSP, mostra em uma janela e permite clicar 2
 pontos com o mouse (clique esquerdo) para definir a linha virtual. Ao final,
-imprime as coordenadas para colar no .env (LINE_X1, LINE_Y1, LINE_X2, LINE_Y2).
+imprime as coordenadas para colar no .env.
 
 Uso:
-    python scripts/calibrar_linha.py
+    python scripts/calibrar_linha.py                    # linha de pessoas (calcada)
+    python scripts/calibrar_linha.py --alvo veiculos     # linha de veiculos (via)
 """
+import argparse
 import sys
 from pathlib import Path
 
@@ -26,6 +28,16 @@ def on_click(event, x, y, flags, userdata):
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--alvo",
+        choices=["pessoas", "veiculos"],
+        default="pessoas",
+        help="Qual linha calibrar: pessoas (calcada) ou veiculos (via). Padrao: pessoas.",
+    )
+    args = parser.parse_args()
+    env_prefix = "LINE_" if args.alvo == "pessoas" else "LINE_VEICULOS_"
+
     if not config.RTSP_URL:
         raise SystemExit("RTSP_URL nao configurada. Copie .env.example para .env e preencha.")
 
@@ -38,7 +50,7 @@ def main():
     if not ok:
         raise SystemExit("Nao foi possivel capturar um frame do stream.")
 
-    window = "Clique 2 pontos para definir a linha (q para sair)"
+    window = f"Clique 2 pontos para a linha de {args.alvo} (q para sair)"
     cv2.namedWindow(window)
     cv2.setMouseCallback(window, on_click)
 
@@ -60,10 +72,10 @@ def main():
     if len(points) == 2:
         (x1, y1), (x2, y2) = points
         print("\nAdicione ao seu .env:")
-        print(f"LINE_X1={x1}")
-        print(f"LINE_Y1={y1}")
-        print(f"LINE_X2={x2}")
-        print(f"LINE_Y2={y2}")
+        print(f"{env_prefix}X1={x1}")
+        print(f"{env_prefix}Y1={y1}")
+        print(f"{env_prefix}X2={x2}")
+        print(f"{env_prefix}Y2={y2}")
     else:
         print("Calibracao cancelada (menos de 2 pontos definidos).")
 

@@ -17,12 +17,16 @@ def get_client() -> Client:
     return _client
 
 
-def insert_event(track_id: int, confianca: float) -> None:
-    """Insere um evento de cruzamento na tabela contagem_eventos."""
+def insert_event(track_id: int, confianca: float, tipo: str = "pessoa") -> None:
+    """Insere um evento de cruzamento na tabela contagem_eventos.
+
+    tipo: 'pessoa' ou 'veiculo'.
+    """
     get_client().table("contagem_eventos").insert(
         {
             "camera_id": config.CAMERA_ID,
             "track_id": track_id,
+            "tipo": tipo,
             "confianca": confianca,
         }
     ).execute()

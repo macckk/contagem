@@ -1,6 +1,7 @@
-# Contagem de Pessoas na Calçada
+# Contagem de Pessoas e Veículos
 
-Sistema de teste para contar pessoas que passam em frente a uma câmera IP,
+Sistema de teste para contar pessoas que passam pela calçada (e,
+opcionalmente, veículos que passam pela via) em frente a uma câmera IP,
 usando YOLOv8 + ByteTrack para detecção/tracking, com contagem única por
 `track_id` (quem cruzou a faixa, sem distinguir direção), gravando os
 eventos no Supabase.
@@ -31,7 +32,8 @@ copy .env.example .env
 
 - `RTSP_URL`: URL RTSP da câmera (senha de RTSP, não a senha do app).
 - `SUPABASE_URL` / `SUPABASE_KEY`: só são necessários a partir da Fase 3.
-- `LINE_X1`/`LINE_Y1`/`LINE_X2`/`LINE_Y2`: preenchidos pelo script de calibração (abaixo).
+- `LINE_X1`/`LINE_Y1`/`LINE_X2`/`LINE_Y2`: linha de pessoas, preenchida pelo script de calibração (abaixo).
+- `LINE_VEICULOS_X1`/`LINE_VEICULOS_Y1`/`LINE_VEICULOS_X2`/`LINE_VEICULOS_Y2`: linha de veículos, opcional (deixe vazio para contar só pessoas).
 
 ### Sobre a captura RTSP (por que existe `src/rtsp_client.py`)
 
@@ -54,9 +56,12 @@ usam esse cliente no lugar de `cv2.VideoCapture`.
 ## Banco de dados (Supabase)
 
 Rode `sql/schema.sql` no SQL editor do Supabase para criar a tabela
-`contagem_eventos` antes de usar a Fase 3. Se você já tinha criado a tabela
-antes (com a coluna `direcao`), rode também
-`sql/migrations/001_remove_direcao.sql` para remove-la.
+`contagem_eventos` antes de usar a Fase 3. A coluna `tipo` marca cada evento
+como `'pessoa'` ou `'veiculo'`. Se você já tinha criado a tabela antes,
+rode as migrations em ordem:
+
+- `sql/migrations/001_remove_direcao.sql` — remove a coluna `direcao` (não é mais usada).
+- `sql/migrations/002_add_tipo.sql` — adiciona a coluna `tipo`.
 
 ## Fases
 
@@ -70,15 +75,21 @@ Mostra as bounding boxes de pessoas detectadas em tempo real. Use para
 confirmar que o RTSP está estável e que a detecção funciona bem no
 ângulo/altura/iluminação reais da câmera. Pressione `q` para sair.
 
-### Calibrar a linha de contagem
+### Calibrar a(s) linha(s) de contagem
 
 ```bash
-python scripts/calibrar_linha.py
+python scripts/calibrar_linha.py                   # linha de pessoas (calcada)
+python scripts/calibrar_linha.py --alvo veiculos    # linha de veiculos (via) - opcional
 ```
 
-Abre um frame da câmera; clique 2 pontos definindo a linha (deve ficar
-restrita à faixa de pedestres da calçada, evitando a via de carros). O
-script imprime `LINE_X1`/`LINE_Y1`/`LINE_X2`/`LINE_Y2` para colar no `.env`.
+Abre um frame da câmera; clique 2 pontos definindo a linha. Para pessoas,
+deve ficar restrita à faixa de pedestres da calçada, evitando a via de
+carros. Para veículos, na faixa da via (é preciso reenquadrar a câmera de
+forma que a via fique visível, se ainda não estiver). O script imprime as
+variáveis para colar no `.env` (`LINE_*` ou `LINE_VEICULOS_*`).
+
+A linha de veículos é opcional — se não for calibrada, os scripts contam só
+pessoas normalmente.
 
 ### Fase 2 — tracking + linha (sem gravar nada)
 
@@ -86,9 +97,10 @@ script imprime `LINE_X1`/`LINE_Y1`/`LINE_X2`/`LINE_Y2` para colar no `.env`.
 python scripts/02_tracking.py
 ```
 
-Mostra o vídeo com IDs de tracking, a linha calibrada e o total de pessoas
-que já cruzaram na tela. Use para validar a lógica de cruzamento antes de
-gravar no banco.
+Mostra o vídeo com IDs de tracking, a(s) linha(s) calibrada(s) e o total de
+pessoas (e de veículos, se a linha correspondente estiver calibrada) que já
+cruzaram na tela. Use para validar a lógica de cruzamento antes de gravar no
+banco.
 
 ### Fase 3/4 — pipeline completo (grava no Supabase)
 
@@ -98,9 +110,10 @@ python scripts/03_pipeline.py --headless  # sem janela, só console (teste de ca
 ```
 
 Cada cruzamento de linha gera um insert em `contagem_eventos`
-(`camera_id`, `track_id`, `confianca`, `timestamp`). Use o modo
+(`camera_id`, `track_id`, `tipo`, `confianca`, `timestamp`). Use o modo
 `--headless` para deixar rodando por algumas horas em horário de movimento e
-depois comparar o total agregado no Supabase com uma contagem manual.
+depois comparar o total agregado no Supabase (filtrando por `tipo`) com uma
+contagem manual.
 
 ## Variáveis de ajuste fino
 
@@ -126,3 +139,17 @@ sql/
   schema.sql             # schema do Supabase
   migrations/            # alteracoes incrementais no schema ja existente
 ```
+
+## Contando veículos além de pessoas
+
+Se você reenquadrar a câmera para também ver a via (o documento original já
+notava que dá pra ver a rua/vagas ao lado da calçada), basta:
+
+1. Calibrar a linha da via: `python scripts/calibrar_linha.py --alvo veiculos`.
+2. Rodar normalmente (`02_tracking.py` ou `03_pipeline.py`) — a detecção
+   passa a incluir carro/moto/ônibus/caminhão automaticamente sempre que
+   `LINE_VEICULOS_*` estiver preenchido no `.env`, sem precisar mudar nada
+   no código.
+
+Os dois tipos de evento vão para a mesma tabela `contagem_eventos`,
+diferenciados pela coluna `tipo`.
