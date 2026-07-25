@@ -17,6 +17,7 @@ from ultralytics import YOLO
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from src import config
+from src.rtsp_client import RTSPClient
 
 
 def main():
@@ -25,7 +26,7 @@ def main():
 
     model = YOLO(config.MODEL_PATH)
 
-    cap = cv2.VideoCapture(config.RTSP_URL)
+    cap = RTSPClient(config.RTSP_URL)
     if not cap.isOpened():
         raise SystemExit(f"Nao foi possivel abrir o stream RTSP: {config.RTSP_URL}")
 

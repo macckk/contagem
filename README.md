@@ -32,6 +32,24 @@ copy .env.example .env
 - `SUPABASE_URL` / `SUPABASE_KEY`: só são necessários a partir da Fase 3.
 - `LINE_X1`/`LINE_Y1`/`LINE_X2`/`LINE_Y2`: preenchidos pelo script de calibração (abaixo).
 
+### Sobre a captura RTSP (por que existe `src/rtsp_client.py`)
+
+O `cv2.VideoCapture` (ffmpeg) não funciona com essa câmera:
+
+1. Ela responde ao `SETUP` em UDP corretamente, mas o roteador não consegue
+   rotear de volta o vídeo (RTP/UDP) quando a câmera está numa sub-rede
+   diferente do PC de controle — o NAT só mantém estado de fluxos que o
+   próprio cliente iniciou, e a câmera empurrando RTP é um fluxo novo.
+2. Em TCP interleaved ela responde ao `SETUP` com um cabeçalho `Transport`
+   levemente malformado (`RTP/AVP` em vez de `RTP/AVP/TCP`), o que faz o
+   parser rígido do ffmpeg recusar a conexão com `Nonmatching transport in
+   server reply`.
+
+Por isso o projeto tem um cliente RTSP próprio (`src/rtsp_client.py`) que
+fala RTSP/TCP interleaved diretamente (com autenticação Digest) e decodifica
+o H.264 recebido via PyAV, contornando os dois problemas. Todos os scripts
+usam esse cliente no lugar de `cv2.VideoCapture`.
+
 ## Banco de dados (Supabase)
 
 Rode `sql/schema.sql` no SQL editor do Supabase para criar a tabela
@@ -98,6 +116,7 @@ depois comparar o total agregado no Supabase com uma contagem manual.
 ```
 src/
   config.py           # leitura do .env
+  rtsp_client.py       # cliente RTSP/TCP proprio + decode H.264 (PyAV)
   supabase_client.py   # insert de eventos
   line_crossing.py     # lógica de cruzamento de linha / direção / dedupe
 scripts/

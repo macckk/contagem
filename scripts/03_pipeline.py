@@ -18,6 +18,7 @@ from ultralytics import YOLO
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from src import config
 from src.line_crossing import LineCrossingCounter
+from src.rtsp_client import RTSPClient
 from src.supabase_client import insert_event
 
 
@@ -40,20 +41,32 @@ def main():
 
     model = YOLO(config.MODEL_PATH)
 
-    results_stream = model.track(
-        source=config.RTSP_URL,
-        classes=[config.PERSON_CLASS_ID],
-        conf=config.CONF_THRESHOLD,
-        device=config.DEVICE,
-        tracker="bytetrack.yaml",
-        stream=True,
-        persist=True,
-        verbose=False,
-        vid_stride=config.FRAME_SKIP,
-    )
+    cap = RTSPClient(config.RTSP_URL)
+    if not cap.isOpened():
+        raise SystemExit(f"Nao foi possivel abrir o stream RTSP: {config.RTSP_URL}")
 
+    frame_idx = 0
     try:
-        for result in results_stream:
+        while True:
+            ok, frame = cap.read()
+            if not ok:
+                print("Falha ao ler frame (stream caiu?). Encerrando.")
+                break
+
+            frame_idx += 1
+            if frame_idx % config.FRAME_SKIP != 0:
+                continue
+
+            result = model.track(
+                frame,
+                classes=[config.PERSON_CLASS_ID],
+                conf=config.CONF_THRESHOLD,
+                device=config.DEVICE,
+                tracker="bytetrack.yaml",
+                persist=True,
+                verbose=False,
+            )[0]
+
             boxes = result.boxes
             if boxes is not None and boxes.id is not None:
                 for xyxy, track_id, conf in zip(
@@ -71,10 +84,10 @@ def main():
                         )
 
             if not args.headless:
-                frame = result.plot()
-                cv2.line(frame, p1, p2, (0, 255, 255), 2)
+                annotated = result.plot()
+                cv2.line(annotated, p1, p2, (0, 255, 255), 2)
                 cv2.putText(
-                    frame,
+                    annotated,
                     f"Entrada: {counter.total_entrada}  Saida: {counter.total_saida}",
                     (10, 30),
                     cv2.FONT_HERSHEY_SIMPLEX,
@@ -82,10 +95,11 @@ def main():
                     (0, 255, 0),
                     2,
                 )
-                cv2.imshow("Fase 3 - Pipeline completo", frame)
+                cv2.imshow("Fase 3 - Pipeline completo", annotated)
                 if cv2.waitKey(1) & 0xFF == ord("q"):
                     break
     finally:
+        cap.release()
         cv2.destroyAllWindows()
         print(f"\nTotal final -> Entrada: {counter.total_entrada}  Saida: {counter.total_saida}")
 

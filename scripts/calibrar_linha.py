@@ -14,6 +14,7 @@ import cv2
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from src import config
+from src.rtsp_client import RTSPClient
 
 points = []
 
@@ -28,7 +29,7 @@ def main():
     if not config.RTSP_URL:
         raise SystemExit("RTSP_URL nao configurada. Copie .env.example para .env e preencha.")
 
-    cap = cv2.VideoCapture(config.RTSP_URL)
+    cap = RTSPClient(config.RTSP_URL)
     if not cap.isOpened():
         raise SystemExit(f"Nao foi possivel abrir o stream RTSP: {config.RTSP_URL}")
 
