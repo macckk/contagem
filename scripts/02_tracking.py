@@ -2,8 +2,9 @@
 
 Usa model.track() (Ultralytics + ByteTrack) para manter IDs persistentes entre
 frames, desenha a(s) linha(s) de contagem calibrada(s) e mostra o total de
-pessoas (e, se a linha de veiculos estiver calibrada, de veiculos) que
-cruzaram - sem distinguir direcao. Nao grava nada no Supabase (isso e a Fase 3).
+pessoas e, se a linha de veiculos estiver calibrada, de cada tipo de veiculo
+(carro/moto/onibus/caminhao/bicicleta) que cruzou - sem distinguir direcao.
+Nao grava nada no Supabase (isso e a Fase 3).
 
 Uso:
     python scripts/02_tracking.py
@@ -49,11 +50,13 @@ def main():
     draw_pessoas = tuple((int(p[0]), int(p[1])) for p in line_pessoas)
 
     line_veiculos = config.get_line_veiculos()
-    counter_veiculos = None
+    counters_veiculos = None
     draw_veiculos = None
     classes = [config.PERSON_CLASS_ID]
     if line_veiculos is not None:
-        counter_veiculos = LineCrossingCounter(*line_veiculos)
+        counters_veiculos = {
+            nome: LineCrossingCounter(*line_veiculos) for nome in config.VEHICLE_CLASS_IDS.values()
+        }
         draw_veiculos = tuple((int(p[0]), int(p[1])) for p in line_veiculos)
         classes += list(config.VEHICLE_CLASS_IDS)
     else:
@@ -71,7 +74,7 @@ def main():
     # O YOLOv8n as vezes reclassifica o mesmo track_id entre frames (ex: uma
     # moto/motociclista pode oscilar entre "motorcycle" e "person"). Se
     # decidissemos o tipo a cada frame, o historico de posicao desse objeto
-    # ficaria fragmentado entre os dois contadores e o cruzamento nunca seria
+    # ficaria fragmentado entre os contadores e o cruzamento nunca seria
     # detectado. Por isso o tipo e fixado na primeira vez que o track_id
     # aparece e mantido daí em diante.
     track_tipo = {}
@@ -117,19 +120,20 @@ def main():
                     if track_id not in track_tipo:
                         if cls_id == config.PERSON_CLASS_ID:
                             track_tipo[track_id] = "pessoa"
-                        elif counter_veiculos is not None and cls_id in config.VEHICLE_CLASS_IDS:
-                            track_tipo[track_id] = "veiculo"
+                        elif counters_veiculos is not None and cls_id in config.VEHICLE_CLASS_IDS:
+                            track_tipo[track_id] = config.VEHICLE_CLASS_IDS[cls_id]
                         else:
                             continue
                     tipo = track_tipo[track_id]
-                    counter = counter_pessoas if tipo == "pessoa" else counter_veiculos
+                    counter = counter_pessoas if tipo == "pessoa" else counters_veiculos[tipo]
 
                     if counter.update(track_id, xyxy):
                         print(f"{tipo} track_id={track_id} conf={conf:.2f} -> cruzou (total {tipo}: {counter.total})")
 
             texto = f"Pessoas: {counter_pessoas.total}"
-            if counter_veiculos is not None:
-                texto += f"   Veiculos: {counter_veiculos.total}"
+            if counters_veiculos is not None:
+                total_veiculos = sum(c.total for c in counters_veiculos.values())
+                texto += f"   Veiculos: {total_veiculos}"
             cv2.putText(
                 annotated,
                 texto,
@@ -148,11 +152,11 @@ def main():
     finally:
         cap.release()
         cv2.destroyAllWindows()
-        print(f"\nTotal final -> Pessoas: {counter_pessoas.total}", end="")
-        if counter_veiculos is not None:
-            print(f"  Veiculos: {counter_veiculos.total}")
-        else:
-            print()
+        print(f"\nTotal final -> Pessoas: {counter_pessoas.total}")
+        if counters_veiculos is not None:
+            for nome, counter in counters_veiculos.items():
+                print(f"  {nome}: {counter.total}")
+            print(f"  Total veiculos: {sum(c.total for c in counters_veiculos.values())}")
 
 
 if __name__ == "__main__":

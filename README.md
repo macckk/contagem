@@ -57,11 +57,13 @@ usam esse cliente no lugar de `cv2.VideoCapture`.
 
 Rode `sql/schema.sql` no SQL editor do Supabase para criar a tabela
 `contagem_eventos` antes de usar a Fase 3. A coluna `tipo` marca cada evento
-como `'pessoa'` ou `'veiculo'`. Se você já tinha criado a tabela antes,
+como `'pessoa'` ou com o tipo específico de veículo (`'car'`, `'motorcycle'`,
+`'bus'`, `'truck'`, `'bicycle'`). Se você já tinha criado a tabela antes,
 rode as migrations em ordem:
 
 - `sql/migrations/001_remove_direcao.sql` — remove a coluna `direcao` (não é mais usada).
 - `sql/migrations/002_add_tipo.sql` — adiciona a coluna `tipo`.
+- `sql/migrations/003_tipo_especifico_veiculo.sql` — troca o `'veiculo'` genérico pelos tipos específicos.
 
 ## Fases
 
@@ -99,8 +101,14 @@ python scripts/02_tracking.py
 
 Mostra o vídeo com IDs de tracking, a(s) linha(s) calibrada(s) e o total de
 pessoas (e de veículos, se a linha correspondente estiver calibrada) que já
-cruzaram na tela. Use para validar a lógica de cruzamento antes de gravar no
-banco.
+cruzaram na tela. Há um contador independente por tipo específico de veículo
+(carro/moto/ônibus/caminhão/bicicleta) — o resumo detalhado por tipo aparece
+no console ao encerrar (`x` ou Ctrl+C). Use para validar a lógica de
+cruzamento antes de gravar no banco.
+
+Use `--debug` para ver no console **todas** as detecções (não só as que
+cruzam a linha) — útil pra confirmar se um tipo de veículo está sendo
+detectado mas não contado, ou simplesmente não passou perto da linha ainda.
 
 ### Fase 3/4 — pipeline completo (grava no Supabase)
 

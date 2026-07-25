@@ -2,7 +2,8 @@ create table contagem_eventos (
   id bigserial primary key,
   camera_id text not null,
   track_id integer not null,
-  tipo text not null default 'pessoa' check (tipo in ('pessoa', 'veiculo')),
+  tipo text not null default 'pessoa'
+    check (tipo in ('pessoa', 'car', 'motorcycle', 'bus', 'truck', 'bicycle')),
   confianca numeric,
   timestamp timestamptz not null default now()
 );
