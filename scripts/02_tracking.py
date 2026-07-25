@@ -99,7 +99,13 @@ def main():
             if counter_veiculos is not None:
                 texto += f"   Veiculos: {counter_veiculos.total}"
             cv2.putText(
-                annotated, texto, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2
+                annotated,
+                texto,
+                (10, annotated.shape[0] - 15),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                1,
+                (0, 255, 0),
+                2,
             )
 
             cv2.imshow("Fase 2 - Tracking + linha", annotated)
