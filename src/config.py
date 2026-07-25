@@ -25,6 +25,7 @@ FRAME_SKIP = max(1, int(os.getenv("FRAME_SKIP", "1")))
 # IDs de classe no dataset COCO, em que o YOLOv8 padrao foi treinado.
 PERSON_CLASS_ID = 0
 VEHICLE_CLASS_IDS = {
+    1: "bicycle",
     2: "car",
     3: "motorcycle",
     5: "bus",
