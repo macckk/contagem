@@ -7,6 +7,8 @@ cruzaram - sem distinguir direcao. Nao grava nada no Supabase (isso e a Fase 3).
 
 Uso:
     python scripts/02_tracking.py
+
+Pressione 'x' na janela para encerrar (ou Ctrl+C no terminal).
 """
 import sys
 from pathlib import Path
@@ -109,8 +111,10 @@ def main():
             )
 
             cv2.imshow("Fase 2 - Tracking + linha", annotated)
-            if cv2.waitKey(1) & 0xFF == ord("q"):
+            if cv2.waitKey(1) & 0xFF == ord("x"):
                 break
+    except KeyboardInterrupt:
+        print("\nInterrompido (Ctrl+C).")
     finally:
         cap.release()
         cv2.destroyAllWindows()

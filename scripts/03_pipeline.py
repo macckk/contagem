@@ -9,6 +9,8 @@ campo (Fase 4).
 Uso:
     python scripts/03_pipeline.py             # com janela
     python scripts/03_pipeline.py --headless  # sem janela, so console
+
+Pressione 'x' na janela para encerrar (ou Ctrl+C no terminal, inclusive no modo --headless).
 """
 import argparse
 import sys
@@ -124,8 +126,10 @@ def main():
                     2,
                 )
                 cv2.imshow("Fase 3 - Pipeline completo", annotated)
-                if cv2.waitKey(1) & 0xFF == ord("q"):
+                if cv2.waitKey(1) & 0xFF == ord("x"):
                     break
+    except KeyboardInterrupt:
+        print("\nInterrompido (Ctrl+C).")
     finally:
         cap.release()
         cv2.destroyAllWindows()
