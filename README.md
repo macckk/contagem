@@ -153,6 +153,25 @@ Variáveis: `ENABLE_NIGHT_MODE` (padrão `true`), `NIGHT_SATURATION_THRESHOLD`
 sem modo IR), `NIGHT_CONF_THRESHOLD`, `NIGHT_CLAHE_CLIP_LIMIT`. Quando
 ativo, aparece `[modo noite]` ao lado dos contadores na tela.
 
+### Tracker mais tolerante (`trackers/bytetrack_tolerante.yaml`)
+
+À noite a detecção fica mais intermitente (ruído do modo IR + desfoque de
+movimento por exposição mais longa), então um veículo pode não ser
+detectado em frames suficientes para o tracker perceber que ele cruzou a
+linha. `trackers/bytetrack_tolerante.yaml` ajusta o ByteTrack padrão da
+Ultralytics para tolerar isso:
+
+- `track_buffer: 60` (padrão: 30) — mantém o track vivo por mais tempo sem detecção.
+- `track_low_thresh: 0.05` (padrão: 0.1) — aceita detecções mais fracas para reconectar a um track já existente.
+
+Usado sempre (dia e noite) — o Ultralytics só lê a config do tracker uma
+vez por sessão (com `persist=True`), então não dá para alternar
+dinamicamente entre um tracker "de dia" e um "de noite" no meio da
+execução. O trade-off é um risco levemente maior de troca de identidade
+(ID switch) quando dois veículos se cruzam bem perto da linha. Pode
+sobrescrever com `TRACKER_CONFIG=<caminho>` no `.env` se quiser usar outro
+arquivo.
+
 ## Estrutura
 
 ```
@@ -162,6 +181,8 @@ src/
   supabase_client.py   # insert de eventos
   line_crossing.py     # lógica de cruzamento de linha / dedupe
   night_mode.py        # deteccao dia/noite + realce de contraste noturno
+trackers/
+  bytetrack_tolerante.yaml  # config do ByteTrack mais tolerante a deteccao intermitente
 scripts/
   01_captura.py         # Fase 1
   calibrar_linha.py     # calibração da linha de contagem

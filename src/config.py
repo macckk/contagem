@@ -1,9 +1,12 @@
 """Configuracao central, carregada de variaveis de ambiente (.env)."""
 import os
+from pathlib import Path
 
 from dotenv import load_dotenv
 
 load_dotenv()
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
 
 
 def _float_or_none(value):
@@ -28,6 +31,13 @@ FRAME_SKIP = max(1, int(os.getenv("FRAME_SKIP", "1")))
 # "truck"). Um valor maior preserva mais detalhe, ao custo de mais
 # processamento.
 IMGSZ = int(os.getenv("IMGSZ", "640"))
+
+# Tracker ByteTrack customizado (mais tolerante a deteccao intermitente,
+# comum a noite por ruido do modo IR e desfoque de movimento) - ver
+# trackers/bytetrack_tolerante.yaml para os detalhes de cada ajuste.
+TRACKER_CONFIG = os.getenv("TRACKER_CONFIG") or str(
+    REPO_ROOT / "trackers" / "bytetrack_tolerante.yaml"
+)
 
 # Modo noite: a noite, farois acesos estouram o brilho e escondem a
 # carroceria do veiculo, derrubando a confianca do YOLO. Essa camera (e

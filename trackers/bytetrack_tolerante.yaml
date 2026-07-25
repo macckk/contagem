@@ -1,0 +1,22 @@
+# ByteTrack ajustado para tolerar deteccao intermitente (moto/carro com
+# deteccao esparsa a noite, por causa de ruido do modo IR e desfoque de
+# movimento por exposicao mais longa). Baseado no bytetrack.yaml padrao da
+# Ultralytics, com dois ajustes:
+#
+# - track_buffer 60 (vs 30 padrao): mantem o track "vivo" por mais tempo
+#   sem deteccao antes de descarta-lo, dando mais chance de reconectar
+#   quando o objeto reaparece do outro lado da linha.
+# - track_low_thresh 0.05 (vs 0.1 padrao): aceita detecções mais fracas
+#   para reassociar a um track ja existente (nao para abrir um track novo -
+#   isso continua exigindo new_track_thresh).
+#
+# Trade-off: um tracker mais tolerante tambem aumenta um pouco o risco de
+# troca de identidade (ID switch) quando 2 veiculos se cruzam bem perto da
+# linha de contagem.
+tracker_type: bytetrack
+track_high_thresh: 0.25
+track_low_thresh: 0.05
+new_track_thresh: 0.25
+track_buffer: 60
+match_thresh: 0.75
+fuse_score: True

@@ -100,7 +100,7 @@ def main():
                 conf=conf_threshold,
                 device=config.DEVICE,
                 imgsz=config.IMGSZ,
-                tracker="bytetrack.yaml",
+                tracker=config.TRACKER_CONFIG,
                 persist=True,
                 verbose=False,
             )[0]
