@@ -9,3 +9,7 @@ output/
 *.mp4
 *.avi
 .vscode/
+
+# dashboard (Vite/React)
+dashboard/node_modules/
+dashboard/dist/

@@ -64,6 +64,7 @@ rode as migrations em ordem:
 - `sql/migrations/001_remove_direcao.sql` — remove a coluna `direcao` (não é mais usada).
 - `sql/migrations/002_add_tipo.sql` — adiciona a coluna `tipo`.
 - `sql/migrations/003_tipo_especifico_veiculo.sql` — troca o `'veiculo'` genérico pelos tipos específicos.
+- `sql/migrations/004_rls_leitura_publica.sql` — habilita RLS e libera leitura pública (`SELECT`) para o dashboard (ver seção **Dashboard** abaixo).
 
 ## Fases
 
@@ -128,6 +129,7 @@ contagem manual.
 - `CONF_THRESHOLD`: confiança mínima do YOLO para considerar uma detecção (padrão `0.4`).
 - `FRAME_SKIP`: processa 1 a cada N frames, para economizar GPU (padrão `1` = todo frame).
 - `MODEL_PATH`: `yolov8n.pt` por padrão; suba para `yolov8s.pt`/`yolov8m.pt` se a acurácia não for suficiente.
+- `IMGSZ`: tamanho de imagem usado na inferência (padrão `640`). Um valor maior (ex: `960`) reduz a fusão de veículos próximos numa única detecção classificada errado, ao custo de mais processamento.
 - `DEVICE`: vazio = auto, `0`/`1` = escolher GPU específica, `cpu` = forçar CPU.
 
 ## Estrutura
@@ -146,6 +148,7 @@ scripts/
 sql/
   schema.sql             # schema do Supabase
   migrations/            # alteracoes incrementais no schema ja existente
+dashboard/                # app React (Vite) publicado no GitHub Pages
 ```
 
 ## Contando veículos além de pessoas
@@ -161,3 +164,33 @@ notava que dá pra ver a rua/vagas ao lado da calçada), basta:
 
 Os dois tipos de evento vão para a mesma tabela `contagem_eventos`,
 diferenciados pela coluna `tipo`.
+
+## Dashboard (Fase 5)
+
+App React (Vite) em `dashboard/`, publicado automaticamente no **GitHub
+Pages** via GitHub Actions a cada push que altere a pasta. É uma página
+estática pública que lê a tabela `contagem_eventos` direto do navegador,
+usando a chave `anon public` do Supabase (não a `service_role`).
+
+- **Publicação**: em Settings → Pages do repositório, defina a fonte como
+  "GitHub Actions" (uma vez só). A URL fica em
+  `https://macckk.github.io/contagem/`.
+- **Segurança**: a chave `anon public` fica hardcoded em
+  `dashboard/src/supabaseClient.js` de propósito — ela é feita para ser
+  pública, e o acesso de leitura é controlado pela RLS policy da migration
+  `004_rls_leitura_publica.sql` (só permite `SELECT`, nunca escrita).
+- **Rodar localmente**:
+  ```bash
+  cd dashboard
+  npm install
+  npm run dev
+  ```
+- **Filtros**: período (hoje / 7 dias / 30 dias / tudo) e confiança mínima
+  (slider, que também atualiza o card de distribuição de confiança). Os
+  dados só são buscados ao carregar a página ou clicar em "Atualizar" (sem
+  polling automático).
+- **Cards**: total de pessoas, total de veículos, confiança média (com
+  histograma) e horário de pico. **Gráficos**: cruzamentos por hora
+  (pessoas vs. veículos) e total por tipo específico de veículo
+  (carro/moto/ônibus/caminhão/bicicleta). Tabela de dados brutos disponível
+  (colapsável) para acessibilidade/conferência.
