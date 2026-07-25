@@ -97,3 +97,16 @@ def get_line_pessoas():
 def get_line_veiculos():
     """Retorna ((x1, y1), (x2, y2)) da linha de contagem de veiculos, ou None se nao calibrada."""
     return _get_line("LINE_VEICULOS_")
+
+
+def get_line_veiculos_noite():
+    """Retorna a linha/zona de veiculos usada a noite.
+
+    O veiculo costuma ser detectado com mais confianca assim que entra no
+    quadro (antes do farol saturar o resto da cena de perto), entao vale a
+    pena calibrar uma linha separada, mais proxima de onde o veiculo
+    aparece. Se LINE_VEICULOS_NOITE_* nao estiver calibrada, cai para a
+    mesma linha usada de dia (get_line_veiculos()).
+    """
+    linha_noite = _get_line("LINE_VEICULOS_NOITE_")
+    return linha_noite if linha_noite is not None else get_line_veiculos()

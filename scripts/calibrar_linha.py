@@ -5,8 +5,15 @@ pontos com o mouse (clique esquerdo) para definir a linha virtual. Ao final,
 imprime as coordenadas para colar no .env.
 
 Uso:
-    python scripts/calibrar_linha.py                    # linha de pessoas (calcada)
-    python scripts/calibrar_linha.py --alvo veiculos     # linha de veiculos (via)
+    python scripts/calibrar_linha.py                          # linha de pessoas (calcada)
+    python scripts/calibrar_linha.py --alvo veiculos           # linha de veiculos (via), de dia
+    python scripts/calibrar_linha.py --alvo veiculos-noite     # linha de veiculos a noite (rode isso de noite!)
+
+A linha de veiculos-noite e opcional: se nao for calibrada, a contagem
+noturna usa a mesma linha/zona de veiculos do dia. Vale calibrar separado
+porque a noite o veiculo costuma ser detectado com mais confianca assim
+que entra no quadro (antes do farol saturar a cena de perto) - um lugar
+diferente do ponto ideal para a linha de dia.
 """
 import argparse
 import sys
@@ -31,12 +38,16 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--alvo",
-        choices=["pessoas", "veiculos"],
+        choices=["pessoas", "veiculos", "veiculos-noite"],
         default="pessoas",
-        help="Qual linha calibrar: pessoas (calcada) ou veiculos (via). Padrao: pessoas.",
+        help="Qual linha calibrar: pessoas (calcada), veiculos (via, de dia) ou veiculos-noite. Padrao: pessoas.",
     )
     args = parser.parse_args()
-    env_prefix = "LINE_" if args.alvo == "pessoas" else "LINE_VEICULOS_"
+    env_prefix = {
+        "pessoas": "LINE_",
+        "veiculos": "LINE_VEICULOS_",
+        "veiculos-noite": "LINE_VEICULOS_NOITE_",
+    }[args.alvo]
 
     if not config.RTSP_URL:
         raise SystemExit("RTSP_URL nao configurada. Copie .env.example para .env e preencha.")

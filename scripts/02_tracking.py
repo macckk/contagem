@@ -63,14 +63,16 @@ def main():
     counters_veiculos_dia = None
     counters_veiculos_noite = None
     draw_veiculos = None
+    draw_veiculos_noite = None
     classes = [config.PERSON_CLASS_ID]
     if line_veiculos is not None:
+        line_veiculos_noite = config.get_line_veiculos_noite()
         counters_veiculos_dia = {
             nome: LineCrossingCounter(*line_veiculos) for nome in config.VEHICLE_CLASS_IDS.values()
         }
         counters_veiculos_noite = {
             nome: ZoneCooldownCounter(
-                *line_veiculos,
+                *line_veiculos_noite,
                 zone_width=config.NIGHT_ZONE_WIDTH_PX,
                 cooldown_seconds=config.NIGHT_ZONE_COOLDOWN_SECONDS,
                 dedupe_distance=config.NIGHT_ZONE_DEDUPE_DISTANCE_PX,
@@ -78,6 +80,8 @@ def main():
             for nome in config.VEHICLE_CLASS_IDS.values()
         }
         draw_veiculos = tuple((int(p[0]), int(p[1])) for p in line_veiculos)
+        if line_veiculos_noite != line_veiculos:
+            draw_veiculos_noite = tuple((int(p[0]), int(p[1])) for p in line_veiculos_noite)
         classes += list(config.VEHICLE_CLASS_IDS)
     else:
         print(
@@ -133,6 +137,8 @@ def main():
             cv2.line(annotated, *draw_pessoas, (0, 255, 255), 2)
             if draw_veiculos:
                 cv2.line(annotated, *draw_veiculos, (255, 0, 255), 2)
+            if draw_veiculos_noite:
+                cv2.line(annotated, *draw_veiculos_noite, (255, 255, 0), 2)
 
             boxes = result.boxes
             if boxes is not None and boxes.id is not None:

@@ -81,15 +81,24 @@ confirmar que o RTSP está estável e que a detecção funciona bem no
 ### Calibrar a(s) linha(s) de contagem
 
 ```bash
-python scripts/calibrar_linha.py                   # linha de pessoas (calcada)
-python scripts/calibrar_linha.py --alvo veiculos    # linha de veiculos (via) - opcional
+python scripts/calibrar_linha.py                       # linha de pessoas (calcada)
+python scripts/calibrar_linha.py --alvo veiculos       # linha de veiculos (via) - opcional
+python scripts/calibrar_linha.py --alvo veiculos-noite # linha de veiculos a noite - opcional, rode de noite
 ```
 
 Abre um frame da câmera; clique 2 pontos definindo a linha. Para pessoas,
 deve ficar restrita à faixa de pedestres da calçada, evitando a via de
 carros. Para veículos, na faixa da via (é preciso reenquadrar a câmera de
 forma que a via fique visível, se ainda não estiver). O script imprime as
-variáveis para colar no `.env` (`LINE_*` ou `LINE_VEICULOS_*`).
+variáveis para colar no `.env` (`LINE_*`, `LINE_VEICULOS_*` ou
+`LINE_VEICULOS_NOITE_*`).
+
+A linha `veiculos-noite` é opcional e só faz sentido calibrar rodando o
+script **de noite**: o veículo costuma ser detectado com mais confiança
+assim que entra no quadro (antes do farol saturar a cena de perto), então
+vale posicionar essa linha num ponto diferente da linha de dia — mais perto
+de onde o carro aparece. Se não for calibrada, a contagem noturna usa a
+mesma linha de veículos do dia.
 
 A linha de veículos é opcional — se não for calibrada, os scripts contam só
 pessoas normalmente.
@@ -192,6 +201,11 @@ segundos), é tratada como o mesmo veículo e ignorada.
 
 De dia continua tudo igual (cruzamento de linha via `LineCrossingCounter`).
 Pessoas não são afetadas por essa mudança, só veículos.
+
+A zona noturna usa a linha `LINE_VEICULOS_NOITE_*` se calibrada (ver seção
+de calibração acima), ou cai para a linha de veículos do dia (`LINE_VEICULOS_*`)
+como padrão. Na janela de vídeo, a linha noturna aparece em ciano quando
+diferente da linha do dia (magenta).
 
 ## Estrutura
 
