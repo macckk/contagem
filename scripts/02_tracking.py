@@ -68,6 +68,14 @@ def main():
     if not cap.isOpened():
         raise SystemExit(f"Nao foi possivel abrir o stream RTSP: {config.RTSP_URL}")
 
+    # O YOLOv8n as vezes reclassifica o mesmo track_id entre frames (ex: uma
+    # moto/motociclista pode oscilar entre "motorcycle" e "person"). Se
+    # decidissemos o tipo a cada frame, o historico de posicao desse objeto
+    # ficaria fragmentado entre os dois contadores e o cruzamento nunca seria
+    # detectado. Por isso o tipo e fixado na primeira vez que o track_id
+    # aparece e mantido daí em diante.
+    track_tipo = {}
+
     frame_idx = 0
     try:
         while True:
@@ -100,18 +108,24 @@ def main():
                 for xyxy, track_id, conf, cls_id in zip(
                     boxes.xyxy.tolist(), boxes.id.tolist(), boxes.conf.tolist(), boxes.cls.tolist()
                 ):
+                    track_id = int(track_id)
                     cls_id = int(cls_id)
                     if args.debug:
                         nome = CLASS_NAMES.get(cls_id, f"classe_{cls_id}")
-                        print(f"[debug] {nome} track_id={int(track_id)} conf={conf:.2f}")
-                    if cls_id == config.PERSON_CLASS_ID:
-                        crossed = counter_pessoas.update(int(track_id), xyxy)
-                        if crossed:
-                            print(f"pessoa track_id={int(track_id)} conf={conf:.2f} -> cruzou (total: {counter_pessoas.total})")
-                    elif counter_veiculos is not None and cls_id in config.VEHICLE_CLASS_IDS:
-                        crossed = counter_veiculos.update(int(track_id), xyxy)
-                        if crossed:
-                            print(f"veiculo track_id={int(track_id)} conf={conf:.2f} -> cruzou (total: {counter_veiculos.total})")
+                        print(f"[debug] {nome} track_id={track_id} conf={conf:.2f}")
+
+                    if track_id not in track_tipo:
+                        if cls_id == config.PERSON_CLASS_ID:
+                            track_tipo[track_id] = "pessoa"
+                        elif counter_veiculos is not None and cls_id in config.VEHICLE_CLASS_IDS:
+                            track_tipo[track_id] = "veiculo"
+                        else:
+                            continue
+                    tipo = track_tipo[track_id]
+                    counter = counter_pessoas if tipo == "pessoa" else counter_veiculos
+
+                    if counter.update(track_id, xyxy):
+                        print(f"{tipo} track_id={track_id} conf={conf:.2f} -> cruzou (total {tipo}: {counter.total})")
 
             texto = f"Pessoas: {counter_pessoas.total}"
             if counter_veiculos is not None:
