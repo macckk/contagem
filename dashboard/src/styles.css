@@ -161,6 +161,32 @@ body {
   color: var(--text-secondary);
   font-size: 14px;
 }
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.theme-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: var(--surface-1);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  font-size: 16px;
+  cursor: pointer;
+  box-shadow: var(--shadow-soft);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.theme-toggle-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-hover);
+}
+.theme-toggle-btn:active {
+  transform: translateY(0);
+}
 .refresh-btn {
   display: inline-flex;
   align-items: center;

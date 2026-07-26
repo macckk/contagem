@@ -8,7 +8,7 @@ export default function TableView({ events }) {
     () => [...events].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)),
     [events]
   );
-  const visible = sorted.slice(0, 500);
+  const visible = sorted.slice(0, 50);
 
   return (
     <div className="glass-card table-card">

@@ -14,6 +14,12 @@ import {
   confidenceHistogram,
 } from "./lib/aggregate.js";
 
+function getInitialTheme() {
+  const saved = localStorage.getItem("theme");
+  if (saved === "light" || saved === "dark") return saved;
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
+
 export default function App() {
   const [range, setRange] = useState("hoje");
   const [confMin, setConfMin] = useState(0);
@@ -21,6 +27,12 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [lastUpdated, setLastUpdated] = useState(null);
+  const [theme, setTheme] = useState(getInitialTheme);
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+    localStorage.setItem("theme", theme);
+  }, [theme]);
 
   const fetchEvents = useCallback(async () => {
     setLoading(true);
@@ -73,14 +85,24 @@ export default function App() {
               : "Carregando…"}
           </p>
         </div>
-        <button
-          className={`refresh-btn ${loading ? "loading" : ""}`}
-          onClick={fetchEvents}
-          disabled={loading}
-        >
-          <span className="refresh-icon">⟳</span>
-          {loading ? "Atualizando…" : "Atualizar"}
-        </button>
+        <div className="header-actions">
+          <button
+            className="theme-toggle-btn"
+            onClick={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}
+            title={theme === "dark" ? "Mudar para tema claro" : "Mudar para tema escuro"}
+            aria-label="Alternar tema claro/escuro"
+          >
+            {theme === "dark" ? "☀️" : "🌙"}
+          </button>
+          <button
+            className={`refresh-btn ${loading ? "loading" : ""}`}
+            onClick={fetchEvents}
+            disabled={loading}
+          >
+            <span className="refresh-icon">⟳</span>
+            {loading ? "Atualizando…" : "Atualizar"}
+          </button>
+        </div>
       </header>
 
       {error && <div className="error-banner">Erro ao carregar dados: {error}</div>}
