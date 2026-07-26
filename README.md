@@ -133,6 +133,18 @@ Cada cruzamento de linha gera um insert em `contagem_eventos`
 depois comparar o total agregado no Supabase (filtrando por `tipo`) com uma
 contagem manual.
 
+### GPU e FPS
+
+Ao iniciar, os scripts 01/02/03 imprimem se uma GPU CUDA foi detectada
+(`GPU detectada: <nome> (cuda:0, X GB)`) ou se vão rodar em CPU. O FPS
+efetivo (captura + inferência + tracking) aparece na tela e é impresso no
+console a cada 5 segundos (funciona também no modo `--headless`).
+
+Uma única câmera/stream processa um frame por vez — não há como dividir a
+inferência de um frame entre 2 GPUs. `DEVICE` no `.env` escolhe **uma** GPU
+(`0` ou `1`); a segunda só seria útil rodando um segundo pipeline em
+paralelo (ex: uma segunda câmera no futuro).
+
 ## Variáveis de ajuste fino
 
 - `CONF_THRESHOLD`: confiança mínima do YOLO para considerar uma detecção (padrão `0.4`).
@@ -220,6 +232,8 @@ src/
   line_crossing.py     # lógica de cruzamento de linha / dedupe
   night_mode.py        # deteccao dia/noite + realce de contraste noturno
   zone_counter.py      # contagem de veiculos a noite por zona + cooldown
+  device_info.py       # mostra se ha GPU CUDA disponivel
+  fps_meter.py         # medidor de FPS (media movel)
 trackers/
   bytetrack_tolerante.yaml  # config do ByteTrack mais tolerante a deteccao intermitente
 scripts/

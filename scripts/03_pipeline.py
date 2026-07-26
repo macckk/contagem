@@ -23,6 +23,7 @@ Pressione 'x' na janela para encerrar (ou Ctrl+C no terminal, inclusive no modo 
 """
 import argparse
 import sys
+import time
 from pathlib import Path
 
 import cv2
@@ -31,6 +32,8 @@ from ultralytics import YOLO
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from src import config
+from src.device_info import print_device_info
+from src.fps_meter import FPSMeter
 from src.line_crossing import LineCrossingCounter
 from src.night_mode import prepare_frame_for_detection
 from src.rtsp_client import RTSPClient
@@ -99,11 +102,15 @@ def main():
         noite = counters_veiculos_noite[nome].total
         return dia + noite
 
+    print_device_info(config.DEVICE)
     model = YOLO(config.MODEL_PATH)
 
     cap = RTSPClient(config.RTSP_URL)
     if not cap.isOpened():
         raise SystemExit(f"Nao foi possivel abrir o stream RTSP: {config.RTSP_URL}")
+
+    fps_meter = FPSMeter()
+    last_fps_print = 0
 
     # O YOLOv8n as vezes reclassifica o mesmo track_id entre frames (ex: uma
     # moto/motociclista pode oscilar entre "motorcycle" e "person"). Se
@@ -137,6 +144,12 @@ def main():
                 persist=True,
                 verbose=False,
             )[0]
+            fps = fps_meter.tick()
+
+            now = time.time()
+            if now - last_fps_print >= 5:
+                print(f"FPS: {fps:.1f}")
+                last_fps_print = now
 
             boxes = result.boxes
             if boxes is not None and boxes.id is not None:
@@ -199,6 +212,15 @@ def main():
                     annotated,
                     texto,
                     (10, annotated.shape[0] - 15),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    1,
+                    (0, 255, 0),
+                    2,
+                )
+                cv2.putText(
+                    annotated,
+                    f"FPS: {fps:.1f}",
+                    (10, 30),
                     cv2.FONT_HERSHEY_SIMPLEX,
                     1,
                     (0, 255, 0),

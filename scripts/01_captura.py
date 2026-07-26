@@ -10,6 +10,7 @@ Uso:
 Pressione 'q' na janela para sair.
 """
 import sys
+import time
 from pathlib import Path
 
 import cv2
@@ -17,6 +18,8 @@ from ultralytics import YOLO
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from src import config
+from src.device_info import print_device_info
+from src.fps_meter import FPSMeter
 from src.rtsp_client import RTSPClient
 
 
@@ -24,12 +27,15 @@ def main():
     if not config.RTSP_URL:
         raise SystemExit("RTSP_URL nao configurada. Copie .env.example para .env e preencha.")
 
+    print_device_info(config.DEVICE)
     model = YOLO(config.MODEL_PATH)
 
     cap = RTSPClient(config.RTSP_URL)
     if not cap.isOpened():
         raise SystemExit(f"Nao foi possivel abrir o stream RTSP: {config.RTSP_URL}")
 
+    fps_meter = FPSMeter()
+    last_print = 0
     frame_idx = 0
     try:
         while True:
@@ -50,7 +56,22 @@ def main():
                 imgsz=config.IMGSZ,
                 verbose=False,
             )
+            fps = fps_meter.tick()
             annotated = results[0].plot()
+            cv2.putText(
+                annotated,
+                f"FPS: {fps:.1f}",
+                (10, 30),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                1,
+                (0, 255, 0),
+                2,
+            )
+
+            now = time.time()
+            if now - last_print >= 5:
+                print(f"FPS: {fps:.1f}")
+                last_print = now
 
             cv2.imshow("Fase 1 - Deteccao de pessoas", annotated)
             if cv2.waitKey(1) & 0xFF == ord("q"):
