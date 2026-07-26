@@ -77,14 +77,14 @@ NIGHT_CLAHE_CLIP_LIMIT = float(os.getenv("NIGHT_CLAHE_CLIP_LIMIT", "2.5"))
 # Parametros separados para dia e noite porque as duas linhas costumam
 # ter geometria/exposicao bem diferentes (ver LINE_VEICULOS_NOITE_*).
 NIGHT_ZONE_MIN_CONF = float(os.getenv("NIGHT_ZONE_MIN_CONF", "0.55"))
-NIGHT_ZONE_WIDTH_PX = float(os.getenv("NIGHT_ZONE_WIDTH_PX", "60"))
-NIGHT_ZONE_COOLDOWN_SECONDS = float(os.getenv("NIGHT_ZONE_COOLDOWN_SECONDS", "4.0"))
-NIGHT_ZONE_DEDUPE_DISTANCE_PX = float(os.getenv("NIGHT_ZONE_DEDUPE_DISTANCE_PX", "80"))
+NIGHT_ZONE_WIDTH_PX = float(os.getenv("NIGHT_ZONE_WIDTH_PX", "150"))
+NIGHT_ZONE_COOLDOWN_SECONDS = float(os.getenv("NIGHT_ZONE_COOLDOWN_SECONDS", "5.0"))
+NIGHT_ZONE_DEDUPE_DISTANCE_PX = float(os.getenv("NIGHT_ZONE_DEDUPE_DISTANCE_PX", "200"))
 
-DAY_ZONE_MIN_CONF = float(os.getenv("DAY_ZONE_MIN_CONF", "0.5"))
-DAY_ZONE_WIDTH_PX = float(os.getenv("DAY_ZONE_WIDTH_PX", "80"))
-DAY_ZONE_COOLDOWN_SECONDS = float(os.getenv("DAY_ZONE_COOLDOWN_SECONDS", "3.0"))
-DAY_ZONE_DEDUPE_DISTANCE_PX = float(os.getenv("DAY_ZONE_DEDUPE_DISTANCE_PX", "80"))
+DAY_ZONE_MIN_CONF = float(os.getenv("DAY_ZONE_MIN_CONF", "0.35"))
+DAY_ZONE_WIDTH_PX = float(os.getenv("DAY_ZONE_WIDTH_PX", "150"))
+DAY_ZONE_COOLDOWN_SECONDS = float(os.getenv("DAY_ZONE_COOLDOWN_SECONDS", "5.0"))
+DAY_ZONE_DEDUPE_DISTANCE_PX = float(os.getenv("DAY_ZONE_DEDUPE_DISTANCE_PX", "200"))
 
 # IDs de classe no dataset COCO, em que o YOLOv8 padrao foi treinado.
 PERSON_CLASS_ID = 0

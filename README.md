@@ -213,18 +213,21 @@ antes de completar o cruzamento.
 Por isso **veículos (dia e noite) são contados de outro jeito**: em vez de
 cruzamento de linha, conta a detecção assim que ela aparece dentro de uma
 faixa ao redor da linha (a "zona"), desde que a confiança seja alta o
-suficiente — `DAY_ZONE_MIN_CONF` (padrão `0.5`) de dia,
+suficiente — `DAY_ZONE_MIN_CONF` (padrão `0.35`) de dia,
 `NIGHT_ZONE_MIN_CONF` (padrão `0.55`) de noite; mais exigente que
 `CONF_THRESHOLD`/`NIGHT_CONF_THRESHOLD`, que são só para manter o tracking
 vivo.
 
 O risco óbvio disso sozinho seria contar o mesmo veículo físico várias
 vezes (o tracking fragmentado gera `track_id`s diferentes para o mesmo
-carro passando). Por isso tem um **cooldown espaço-temporal**: uma nova
+carro/moto passando — moto em especial, por ser menor e mais dificil de
+manter o rastro). Por isso tem um **cooldown espaço-temporal**: uma nova
 detecção do mesmo tipo, perto (`DAY_ZONE_DEDUPE_DISTANCE_PX`/
-`NIGHT_ZONE_DEDUPE_DISTANCE_PX`, padrão `80` pixels) e logo em seguida
-(`DAY_ZONE_COOLDOWN_SECONDS`, padrão `3s` / `NIGHT_ZONE_COOLDOWN_SECONDS`,
-padrão `4s`), é tratada como o mesmo veículo e ignorada.
+`NIGHT_ZONE_DEDUPE_DISTANCE_PX`, padrão `200` pixels — maior que a própria
+zona, pra cobrir o quanto o veículo se move entre um fragmento de track e
+outro) e logo em seguida (`DAY_ZONE_COOLDOWN_SECONDS`/
+`NIGHT_ZONE_COOLDOWN_SECONDS`, padrão `5s`), é tratada como o mesmo
+veículo e ignorada.
 
 Pessoas não são afetadas por essa mudança — continuam contadas por
 cruzamento de linha (`LineCrossingCounter`).
