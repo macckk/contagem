@@ -39,6 +39,11 @@ TRACKER_CONFIG = os.getenv("TRACKER_CONFIG") or str(
     REPO_ROOT / "trackers" / "bytetrack_tolerante.yaml"
 )
 
+# Precisao FP16 (half) na inferencia - só tem efeito com GPU CUDA (quase
+# 2x mais rapido nela); em CPU e ignorado automaticamente
+# (ver src/device_info.should_use_half).
+HALF_PRECISION = os.getenv("HALF_PRECISION", "false").strip().lower() in ("1", "true", "yes")
+
 # Modo noite: a noite, farois acesos estouram o brilho e escondem a
 # carroceria do veiculo, derrubando a confianca do YOLO. Essa camera (e
 # varias outras Yoosee/HiIpCamera) muda pra modo infravermelho P&B a noite,

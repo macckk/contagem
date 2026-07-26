@@ -32,7 +32,7 @@ from ultralytics import YOLO
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from src import config
-from src.device_info import print_device_info
+from src.device_info import print_device_info, should_use_half
 from src.fps_meter import FPSMeter
 from src.line_crossing import LineCrossingCounter
 from src.night_mode import prepare_frame_for_detection
@@ -108,6 +108,7 @@ def main():
         return dia + noite
 
     print_device_info(config.DEVICE)
+    use_half = config.HALF_PRECISION and should_use_half(config.DEVICE)
     model = YOLO(config.MODEL_PATH)
 
     cap = RTSPClient(config.RTSP_URL)
@@ -145,6 +146,7 @@ def main():
                 conf=conf_threshold,
                 device=config.DEVICE,
                 imgsz=config.IMGSZ,
+                half=use_half,
                 tracker=config.TRACKER_CONFIG,
                 persist=True,
                 verbose=False,

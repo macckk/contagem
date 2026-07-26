@@ -18,7 +18,7 @@ from ultralytics import YOLO
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from src import config
-from src.device_info import print_device_info
+from src.device_info import print_device_info, should_use_half
 from src.fps_meter import FPSMeter
 from src.rtsp_client import RTSPClient
 
@@ -28,6 +28,7 @@ def main():
         raise SystemExit("RTSP_URL nao configurada. Copie .env.example para .env e preencha.")
 
     print_device_info(config.DEVICE)
+    use_half = config.HALF_PRECISION and should_use_half(config.DEVICE)
     model = YOLO(config.MODEL_PATH)
 
     cap = RTSPClient(config.RTSP_URL)
@@ -54,6 +55,7 @@ def main():
                 conf=config.CONF_THRESHOLD,
                 device=config.DEVICE,
                 imgsz=config.IMGSZ,
+                half=use_half,
                 verbose=False,
             )
             fps = fps_meter.tick()

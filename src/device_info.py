@@ -20,3 +20,16 @@ def print_device_info(device_setting):
     nome = torch.cuda.get_device_name(idx)
     total_mem_gb = torch.cuda.get_device_properties(idx).total_memory / (1024**3)
     print(f"GPU detectada: {nome} (cuda:{idx}, {total_mem_gb:.1f} GB) - device usado na inferencia.")
+
+
+def should_use_half(device_setting) -> bool:
+    """Half precision (FP16) so faz sentido com GPU CUDA de verdade - em
+    CPU nao ha ganho (e algumas operacoes nem suportam), entao e desligado
+    automaticamente mesmo que HALF_PRECISION=true no .env."""
+    if device_setting == "cpu":
+        return False
+    try:
+        import torch
+    except ImportError:
+        return False
+    return torch.cuda.is_available()
