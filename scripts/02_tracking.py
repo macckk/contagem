@@ -148,6 +148,7 @@ def main():
                 device=config.DEVICE,
                 imgsz=config.IMGSZ,
                 quantize=quantize,
+                augment=config.AUGMENT_INFERENCE,
                 tracker=config.TRACKER_CONFIG,
                 persist=True,
                 verbose=False,

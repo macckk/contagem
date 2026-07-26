@@ -157,8 +157,9 @@ mesmo testando numa máquina sem GPU.
 - `CONF_THRESHOLD`: confiança mínima do YOLO para considerar uma detecção (padrão `0.4`).
 - `FRAME_SKIP`: processa 1 a cada N frames, para economizar GPU (padrão `1` = todo frame).
 - `MODEL_PATH`: `yolov8n.pt` por padrão; suba para `yolov8s.pt`/`yolov8m.pt` se a acurácia não for suficiente.
-- `IMGSZ`: tamanho de imagem usado na inferência (padrão `640`). Um valor maior (ex: `960`) reduz a fusão de veículos próximos numa única detecção classificada errado, ao custo de mais processamento.
+- `IMGSZ`: tamanho de imagem usado na inferência (padrão `640`). Um valor maior (ex: `960`, ou `1280` = resolução nativa da câmera) reduz a fusão de veículos próximos numa única detecção classificada errado e ajuda a detectar veículos menores/mais distantes, ao custo de mais processamento.
 - `DEVICE`: vazio = auto, `0`/`1` = escolher GPU específica, `cpu` = forçar CPU.
+- `AUGMENT_INFERENCE`: test-time augmentation (múltiplas escalas/espelhamentos combinados) — ajuda a recuperar veículos com motion blur (carro/moto passando rápido) ou parcialmente visíveis. Custa ~2-3x mais processamento; só vale a pena com GPU sobrando.
 
 ### Modo noite
 

@@ -57,6 +57,7 @@ def main():
                 device=config.DEVICE,
                 imgsz=config.IMGSZ,
                 quantize=quantize,
+                augment=config.AUGMENT_INFERENCE,
                 verbose=False,
             )
             fps = fps_meter.tick()

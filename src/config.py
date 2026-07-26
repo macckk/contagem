@@ -44,6 +44,12 @@ TRACKER_CONFIG = os.getenv("TRACKER_CONFIG") or str(
 # (ver src/device_info.should_use_half).
 HALF_PRECISION = os.getenv("HALF_PRECISION", "false").strip().lower() in ("1", "true", "yes")
 
+# Test-time augmentation: roda a inferencia em multiplas escalas/espelhamentos
+# e combina os resultados. Ajuda a recuperar veiculos com motion blur (carro/
+# moto passando rapido) ou parcialmente visiveis, ao custo de ~2-3x mais
+# processamento por frame - so vale a pena com GPU sobrando.
+AUGMENT_INFERENCE = os.getenv("AUGMENT_INFERENCE", "false").strip().lower() in ("1", "true", "yes")
+
 # Modo noite: a noite, farois acesos estouram o brilho e escondem a
 # carroceria do veiculo, derrubando a confianca do YOLO. Essa camera (e
 # varias outras Yoosee/HiIpCamera) muda pra modo infravermelho P&B a noite,
