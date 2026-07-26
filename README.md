@@ -145,10 +145,12 @@ inferência de um frame entre 2 GPUs. `DEVICE` no `.env` escolhe **uma** GPU
 (`0` ou `1`); a segunda só seria útil rodando um segundo pipeline em
 paralelo (ex: uma segunda câmera no futuro).
 
-`HALF_PRECISION=true` ativa precisão FP16 na inferência — quase 2x mais
-rápido em GPU CUDA, sem perda perceptível de acurácia. É desligado
-automaticamente em CPU (`src/device_info.should_use_half`), então não tem
-problema deixar `true` mesmo testando numa máquina sem GPU.
+`HALF_PRECISION=true` ativa precisão FP16 na inferência (via `quantize=16`
+no `model.track()`/`predict()` — o parâmetro antigo `half=` foi depreciado
+pelo Ultralytics) — quase 2x mais rápido em GPU CUDA, sem perda perceptível
+de acurácia. É desligado automaticamente em CPU
+(`src/device_info.should_use_half`), então não tem problema deixar `true`
+mesmo testando numa máquina sem GPU.
 
 ## Variáveis de ajuste fino
 

@@ -109,6 +109,7 @@ def main():
 
     print_device_info(config.DEVICE)
     use_half = config.HALF_PRECISION and should_use_half(config.DEVICE)
+    quantize = 16 if use_half else 32
     model = YOLO(config.MODEL_PATH)
 
     cap = RTSPClient(config.RTSP_URL)
@@ -146,7 +147,7 @@ def main():
                 conf=conf_threshold,
                 device=config.DEVICE,
                 imgsz=config.IMGSZ,
-                half=use_half,
+                quantize=quantize,
                 tracker=config.TRACKER_CONFIG,
                 persist=True,
                 verbose=False,
