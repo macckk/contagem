@@ -201,34 +201,41 @@ execução. O trade-off é um risco levemente maior de troca de identidade
 sobrescrever com `TRACKER_CONFIG=<caminho>` no `.env` se quiser usar outro
 arquivo.
 
-### Contagem noturna por zona (`src/zone_counter.py`)
+### Contagem de veículos por zona (`src/zone_counter.py`)
 
-Mesmo com o tracker mais tolerante, um veículo à noite pode nunca ser
-detectado nos dois lados da linha — o `LineCrossingCounter` exige isso e
-simplesmente não contaria nada. Por isso, **à noite, veículos são contados
-de outro jeito**: em vez de cruzamento de linha, conta a detecção assim
-que ela aparece dentro de uma faixa ao redor da linha (a "zona"), desde
-que a confiança seja alta o suficiente (`NIGHT_ZONE_MIN_CONF`, padrão
-`0.55` — mais exigente que o `NIGHT_CONF_THRESHOLD` usado só para manter o
-tracking vivo).
+Mesmo com o tracker mais tolerante, um veículo pode nunca ser detectado
+nos dois lados da linha — o `LineCrossingCounter` exige isso e
+simplesmente não contaria nada. Isso é comum à noite (ruído do modo IR),
+mas também de dia: carro/moto passando rápido sofre motion blur, ou fica
+parcialmente encoberto por outro veículo, e o tracking perde o rastro
+antes de completar o cruzamento.
+
+Por isso **veículos (dia e noite) são contados de outro jeito**: em vez de
+cruzamento de linha, conta a detecção assim que ela aparece dentro de uma
+faixa ao redor da linha (a "zona"), desde que a confiança seja alta o
+suficiente — `DAY_ZONE_MIN_CONF` (padrão `0.5`) de dia,
+`NIGHT_ZONE_MIN_CONF` (padrão `0.55`) de noite; mais exigente que
+`CONF_THRESHOLD`/`NIGHT_CONF_THRESHOLD`, que são só para manter o tracking
+vivo.
 
 O risco óbvio disso sozinho seria contar o mesmo veículo físico várias
 vezes (o tracking fragmentado gera `track_id`s diferentes para o mesmo
 carro passando). Por isso tem um **cooldown espaço-temporal**: uma nova
-detecção do mesmo tipo, perto (`NIGHT_ZONE_DEDUPE_DISTANCE_PX`, padrão `80`
-pixels) e logo em seguida (`NIGHT_ZONE_COOLDOWN_SECONDS`, padrão `4`
-segundos), é tratada como o mesmo veículo e ignorada.
+detecção do mesmo tipo, perto (`DAY_ZONE_DEDUPE_DISTANCE_PX`/
+`NIGHT_ZONE_DEDUPE_DISTANCE_PX`, padrão `80` pixels) e logo em seguida
+(`DAY_ZONE_COOLDOWN_SECONDS`, padrão `3s` / `NIGHT_ZONE_COOLDOWN_SECONDS`,
+padrão `4s`), é tratada como o mesmo veículo e ignorada.
 
-De dia continua tudo igual (cruzamento de linha via `LineCrossingCounter`).
-Pessoas não são afetadas por essa mudança, só veículos.
+Pessoas não são afetadas por essa mudança — continuam contadas por
+cruzamento de linha (`LineCrossingCounter`).
 
 A zona noturna usa a linha `LINE_VEICULOS_NOITE_*` se calibrada (ver seção
 de calibração acima), ou cai para a linha de veículos do dia (`LINE_VEICULOS_*`)
-como padrão. Na janela de vídeo, a linha noturna aparece em ciano quando
-diferente da linha do dia (magenta), e a faixa em si (`NIGHT_ZONE_WIDTH_PX`
-pixels para cada lado da linha) aparece desenhada como um retângulo
-translúcido — só durante o modo noite — pra facilitar ver exatamente a
-área usada na contagem.
+como padrão. Na janela de vídeo, as duas zonas (dia em magenta,
+`DAY_ZONE_WIDTH_PX` pixels de cada lado da linha; noite em ciano,
+`NIGHT_ZONE_WIDTH_PX`) aparecem sempre desenhadas como retângulos
+translúcidos, facilitando ver exatamente a área usada na contagem em
+qualquer horário.
 
 ## Estrutura
 

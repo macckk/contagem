@@ -6,13 +6,16 @@ pessoas e, se a linha de veiculos estiver calibrada, de cada tipo de veiculo
 (carro/moto/onibus/caminhao/bicicleta) que passou - sem distinguir direcao.
 Nao grava nada no Supabase (isso e a Fase 3).
 
-De dia, veiculos sao contados por cruzamento de linha (LineCrossingCounter).
-A noite, a deteccao fica intermitente (ruido do modo IR + desfoque de
-movimento) e o tracking raramente sobrevive ao cruzamento completo - por
-isso, a noite, veiculos sao contados por zona + cooldown
-(src/zone_counter.py): basta a deteccao aparecer perto da linha com
-confianca alta, e um cooldown espaco-temporal evita contar o mesmo veiculo
-2x quando o track_id fragmenta.
+Pessoas continuam contadas por cruzamento de linha (LineCrossingCounter).
+Veiculos (dia e noite) sao contados por zona + cooldown
+(src/zone_counter.py): o tracking fragmenta com frequencia (moto/carro com
+motion blur passando rapido, ou parcialmente encobertos por outro veiculo -
+mais comum ainda a noite, por ruido do modo IR), entao exigir o cruzamento
+completo da linha (LineCrossingCounter) deixa passar muitos veiculos sem
+contar. Em vez disso: basta a deteccao aparecer perto da linha com
+confianca suficiente, e um cooldown espaco-temporal evita contar o mesmo
+veiculo 2x quando o track_id muda no meio da passagem. A faixa da zona
+aparece desenhada na tela (translucida) nas duas linhas, dia e noite.
 
 Uso:
     python scripts/02_tracking.py
@@ -41,12 +44,13 @@ from src.zone_counter import ZoneCooldownCounter, zone_polygon
 
 
 def draw_zone(frame, p1, p2, width_px, color):
-    """Desenha a faixa (retangulo translucido) usada na contagem noturna por zona."""
+    """Desenha a faixa (retangulo translucido) usada na contagem de veiculos por zona."""
     poly = np.array(zone_polygon(p1, p2, width_px), dtype=np.int32)
     overlay = frame.copy()
     cv2.fillPoly(overlay, [poly], color)
     cv2.addWeighted(overlay, 0.18, frame, 0.82, 0, frame)
     cv2.polylines(frame, [poly], isClosed=True, color=color, thickness=1)
+
 
 CLASS_NAMES = {config.PERSON_CLASS_ID: "person", **config.VEHICLE_CLASS_IDS}
 
@@ -73,6 +77,7 @@ def main():
     draw_pessoas = tuple((int(p[0]), int(p[1])) for p in line_pessoas)
 
     line_veiculos = config.get_line_veiculos()
+    line_veiculos_noite = None
     counters_veiculos_dia = None
     counters_veiculos_noite = None
     draw_veiculos = None
@@ -81,7 +86,13 @@ def main():
     if line_veiculos is not None:
         line_veiculos_noite = config.get_line_veiculos_noite()
         counters_veiculos_dia = {
-            nome: LineCrossingCounter(*line_veiculos) for nome in config.VEHICLE_CLASS_IDS.values()
+            nome: ZoneCooldownCounter(
+                *line_veiculos,
+                zone_width=config.DAY_ZONE_WIDTH_PX,
+                cooldown_seconds=config.DAY_ZONE_COOLDOWN_SECONDS,
+                dedupe_distance=config.DAY_ZONE_DEDUPE_DISTANCE_PX,
+            )
+            for nome in config.VEHICLE_CLASS_IDS.values()
         }
         counters_veiculos_noite = {
             nome: ZoneCooldownCounter(
@@ -161,7 +172,8 @@ def main():
                 cv2.line(annotated, *draw_veiculos, (255, 0, 255), 2)
             if draw_veiculos_noite:
                 cv2.line(annotated, *draw_veiculos_noite, (255, 255, 0), 2)
-            if is_night and counters_veiculos_noite is not None:
+            if counters_veiculos_dia is not None:
+                draw_zone(annotated, *line_veiculos, config.DAY_ZONE_WIDTH_PX, (255, 0, 255))
                 draw_zone(annotated, *line_veiculos_noite, config.NIGHT_ZONE_WIDTH_PX, (255, 255, 0))
 
             boxes = result.boxes
@@ -193,11 +205,16 @@ def main():
                         crossed = counters_veiculos_noite[tipo].update(track_id, xyxy)
                         total = total_veiculos_tipo(tipo)
                     else:
+                        if conf < config.DAY_ZONE_MIN_CONF:
+                            continue
                         crossed = counters_veiculos_dia[tipo].update(track_id, xyxy)
                         total = total_veiculos_tipo(tipo)
 
                     if crossed:
-                        origem = "zona-noite" if (tipo != "pessoa" and is_night) else "linha"
+                        if tipo == "pessoa":
+                            origem = "linha"
+                        else:
+                            origem = "zona-noite" if is_night else "zona-dia"
                         print(f"{tipo} track_id={track_id} conf={conf:.2f} -> contado ({origem}, total {tipo}: {total})")
 
             texto = f"Pessoas: {counter_pessoas.total}"
