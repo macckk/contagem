@@ -138,6 +138,13 @@ def main():
     # aparece e mantido daí em diante.
     track_tipo = {}
 
+    # Acumuladores de tempo (preprocess de noite vs inferencia) para o print
+    # periodico abaixo - ajuda a isolar se uma queda de FPS a noite vem do
+    # CLAHE/blur (CPU) ou da propria inferencia do YOLO.
+    preprocess_time_total = 0.0
+    inference_time_total = 0.0
+    timed_frames = 0
+
     frame_idx = 0
     try:
         while True:
@@ -150,7 +157,9 @@ def main():
             if frame_idx % config.FRAME_SKIP != 0:
                 continue
 
+            t0 = time.time()
             detect_frame, is_night, conf_threshold = prepare_frame_for_detection(frame)
+            t1 = time.time()
 
             result = model.track(
                 detect_frame,
@@ -164,6 +173,10 @@ def main():
                 persist=True,
                 verbose=False,
             )[0]
+            t2 = time.time()
+            preprocess_time_total += t1 - t0
+            inference_time_total += t2 - t1
+            timed_frames += 1
             fps = fps_meter.tick()
 
             annotated = result.plot()
@@ -223,19 +236,22 @@ def main():
                 texto += f"   Veiculos: {total_veiculos}"
             if is_night:
                 texto += "   [modo noite]"
+            (texto_w, _), _ = cv2.getTextSize(texto, cv2.FONT_HERSHEY_SIMPLEX, 1, 2)
             cv2.putText(
                 annotated,
                 texto,
-                (10, annotated.shape[0] - 15),
+                (annotated.shape[1] - texto_w - 10, 30),
                 cv2.FONT_HERSHEY_SIMPLEX,
                 1,
                 (0, 255, 0),
                 2,
             )
+            fps_texto = f"FPS: {fps:.1f}"
+            (fps_texto_w, _), _ = cv2.getTextSize(fps_texto, cv2.FONT_HERSHEY_SIMPLEX, 1, 2)
             cv2.putText(
                 annotated,
-                f"FPS: {fps:.1f}",
-                (10, 30),
+                fps_texto,
+                (annotated.shape[1] - fps_texto_w - 10, 65),
                 cv2.FONT_HERSHEY_SIMPLEX,
                 1,
                 (0, 255, 0),
@@ -244,7 +260,16 @@ def main():
 
             now = time.time()
             if now - last_fps_print >= 5:
-                print(f"FPS: {fps:.1f}")
+                if timed_frames > 0:
+                    print(
+                        f"FPS: {fps:.1f}  "
+                        f"(preprocess: {1000 * preprocess_time_total / timed_frames:.0f}ms/frame, "
+                        f"inferencia: {1000 * inference_time_total / timed_frames:.0f}ms/frame, "
+                        f"{'noite' if is_night else 'dia'})"
+                    )
+                preprocess_time_total = 0.0
+                inference_time_total = 0.0
+                timed_frames = 0
                 last_fps_print = now
 
             cv2.imshow("Fase 2 - Tracking + linha", annotated)
