@@ -1,0 +1,13 @@
+-- A coluna "timestamp" e timestamptz, entao o valor gravado (via now()) ja
+-- fica correto internamente em UTC - o problema e que o timezone padrao do
+-- banco no Supabase e UTC, entao qualquer visualizacao "crua" (SQL Editor,
+-- Table Editor, psql) mostra o horario 3h adiantado em relacao a Brasilia.
+-- Isso confunde a validacao manual da Fase 4 (comparar contagem do sistema
+-- com contagem manual no relogio local).
+--
+-- Define o timezone padrao do banco como America/Sao_Paulo, para que essas
+-- visualizacoes diretas passem a mostrar o horario local automaticamente.
+-- Nao afeta o dashboard (que ja converte para o horario local do navegador
+-- via JS Date) nem os dados ja gravados (continuam corretos, so muda a
+-- forma como sao *exibidos* nas ferramentas do proprio Postgres).
+alter database postgres set timezone to 'America/Sao_Paulo';

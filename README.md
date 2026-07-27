@@ -65,6 +65,7 @@ rode as migrations em ordem:
 - `sql/migrations/002_add_tipo.sql` — adiciona a coluna `tipo`.
 - `sql/migrations/003_tipo_especifico_veiculo.sql` — troca o `'veiculo'` genérico pelos tipos específicos.
 - `sql/migrations/004_rls_leitura_publica.sql` — habilita RLS e libera leitura pública (`SELECT`) para o dashboard (ver seção **Dashboard** abaixo).
+- `sql/migrations/005_timezone_brasilia.sql` — ajusta o timezone padrão do banco para `America/Sao_Paulo`, para que o SQL Editor/Table Editor do Supabase mostrem os horários já convertidos (a coluna `timestamp` é `timestamptz`, então os dados continuam corretos internamente; sem isso, a visualização crua no Supabase aparece 3h adiantada, em UTC).
 
 ## Fases
 
