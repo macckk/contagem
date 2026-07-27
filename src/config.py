@@ -61,7 +61,7 @@ AUGMENT_INFERENCE = os.getenv("AUGMENT_INFERENCE", "false").strip().lower() in (
 ENABLE_NIGHT_MODE = os.getenv("ENABLE_NIGHT_MODE", "true").strip().lower() in ("1", "true", "yes")
 NIGHT_SATURATION_THRESHOLD = float(os.getenv("NIGHT_SATURATION_THRESHOLD", "20"))
 NIGHT_LUMINANCE_THRESHOLD = float(os.getenv("NIGHT_LUMINANCE_THRESHOLD", "70"))
-NIGHT_CONF_THRESHOLD = float(os.getenv("NIGHT_CONF_THRESHOLD", "0.25"))
+NIGHT_CONF_THRESHOLD = float(os.getenv("NIGHT_CONF_THRESHOLD", "0.15"))
 NIGHT_CLAHE_CLIP_LIMIT = float(os.getenv("NIGHT_CLAHE_CLIP_LIMIT", "2.5"))
 
 # Contagem de veiculos por ZONA + cooldown (src/zone_counter.py), em vez de

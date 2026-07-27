@@ -176,7 +176,13 @@ alto mesmo de noite) e, quando ativo:
    detecção, para reduzir o ruído granulado do modo IR e destacar melhor a
    silhueta do veículo nas partes não totalmente estouradas pelo farol.
 2. Usa um limiar de confiança mais baixo (`NIGHT_CONF_THRESHOLD`, padrão
-   `0.25`, vs. `CONF_THRESHOLD` de dia).
+   `0.15`, vs. `CONF_THRESHOLD` de dia) — motos são o caso mais sensível: o
+   farol único e a silhueta menor rendem confiança bem mais baixa que carros
+   no modo IR, e com um limiar alto o YOLO simplesmente não gera nenhuma
+   detecção para a moto (nem aparece no `--debug`), então esse corte
+   precisa ficar bem permissivo. Isso não afeta a contagem em si — quem
+   decide o que conta é `NIGHT_ZONE_MIN_CONF` (mais alto, ver seção de
+   zona), este aqui só decide o que chega a ser rastreado.
 
 Variáveis: `ENABLE_NIGHT_MODE` (padrão `true`), `NIGHT_SATURATION_THRESHOLD`
 (padrão `20`), `NIGHT_LUMINANCE_THRESHOLD` (sinal secundário, para câmeras
