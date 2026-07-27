@@ -18,10 +18,13 @@ basta a deteccao aparecer perto da linha com confianca suficiente
 evita contar o mesmo veiculo 2x quando o track_id muda no meio da passagem.
 
 Uso:
-    python scripts/03_pipeline.py             # com janela
-    python scripts/03_pipeline.py --headless  # sem janela, so console
+    python scripts/03_pipeline.py                      # com janela completa
+    python scripts/03_pipeline.py --headless           # sem janela, so console
+    python scripts/03_pipeline.py --headless --preview # so console + janelinha leve de video
 
-Pressione 'x' na janela para encerrar (ou Ctrl+C no terminal, inclusive no modo --headless).
+Se a conexao RTSP cair no meio do teste, o script fica tentando reconectar
+(a cada 5s) em vez de encerrar - o monitoramento so para de fato com 'x' na
+janela (se houver) ou Ctrl+C no terminal.
 """
 import argparse
 import sys
@@ -52,9 +55,28 @@ def draw_zone(frame, p1, p2, width_px, color):
     cv2.polylines(frame, [poly], isClosed=True, color=color, thickness=1)
 
 
+def open_capture(retry_wait=5.0):
+    """Abre o RTSPClient, tentando de novo indefinidamente (com espera entre
+    tentativas) se a camera nao responder - usado tanto na conexao inicial
+    quanto para reconectar apos a stream cair no meio do teste de campo."""
+    while True:
+        cap = RTSPClient(config.RTSP_URL)
+        if cap.isOpened():
+            return cap
+        cap.release()
+        print(f"Nao foi possivel conectar a {config.RTSP_URL}. Tentando de novo em {retry_wait:.0f}s...")
+        time.sleep(retry_wait)
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--headless", action="store_true", help="Nao abrir janela de video")
+    parser.add_argument(
+        "--preview",
+        action="store_true",
+        help="Mostra uma janela pequena (leve, sem desenhar caixas/zonas) com o video ao vivo - "
+        "pode ser usado junto com --headless para acompanhar o teste de campo sem o custo da janela completa.",
+    )
     args = parser.parse_args()
 
     if not config.RTSP_URL:
@@ -117,9 +139,7 @@ def main():
     quantize = 16 if use_half else 32
     model = YOLO(config.MODEL_PATH)
 
-    cap = RTSPClient(config.RTSP_URL)
-    if not cap.isOpened():
-        raise SystemExit(f"Nao foi possivel abrir o stream RTSP: {config.RTSP_URL}")
+    cap = open_capture()
 
     fps_meter = FPSMeter()
     last_fps_print = 0
@@ -137,8 +157,11 @@ def main():
         while True:
             ok, frame = cap.read()
             if not ok:
-                print("Falha ao ler frame (stream caiu?). Encerrando.")
-                break
+                print("Conexao com a camera perdida - tentando reconectar...")
+                cap.release()
+                cap = open_capture()
+                print("Reconectado - retomando o monitoramento.")
+                continue
 
             frame_idx += 1
             if frame_idx % config.FRAME_SKIP != 0:
@@ -210,6 +233,15 @@ def main():
                             f"({origem}, total {tipo}: {total})"
                         )
 
+            texto = f"Pessoas: {counter_pessoas.total}"
+            if counters_veiculos_dia is not None:
+                total_veiculos = sum(
+                    total_veiculos_tipo(n) for n in config.VEHICLE_CLASS_IDS.values()
+                )
+                texto += f"   Veiculos: {total_veiculos}"
+            if is_night:
+                texto += "   [modo noite]"
+
             if not args.headless:
                 annotated = result.plot()
                 cv2.line(annotated, *draw_pessoas, (0, 255, 255), 2)
@@ -220,14 +252,6 @@ def main():
                 if counters_veiculos_dia is not None:
                     draw_zone(annotated, *line_veiculos, config.DAY_ZONE_WIDTH_PX, (255, 0, 255))
                     draw_zone(annotated, *line_veiculos_noite, config.NIGHT_ZONE_WIDTH_PX, (255, 255, 0))
-                texto = f"Pessoas: {counter_pessoas.total}"
-                if counters_veiculos_dia is not None:
-                    total_veiculos = sum(
-                        total_veiculos_tipo(n) for n in config.VEHICLE_CLASS_IDS.values()
-                    )
-                    texto += f"   Veiculos: {total_veiculos}"
-                if is_night:
-                    texto += "   [modo noite]"
                 cv2.putText(
                     annotated,
                     texto,
@@ -247,6 +271,26 @@ def main():
                     2,
                 )
                 cv2.imshow("Fase 3 - Pipeline completo", annotated)
+
+            if args.preview:
+                # Janela leve: so redimensiona o frame cru (sem caixas/zonas,
+                # que exigem result.plot() - mais custoso) para acompanhar o
+                # teste de campo em --headless sem pesar no processamento.
+                preview_w = 480
+                scale = preview_w / frame.shape[1]
+                preview_frame = cv2.resize(frame, (preview_w, int(frame.shape[0] * scale)))
+                cv2.putText(
+                    preview_frame,
+                    f"{texto}  FPS: {fps:.1f}",
+                    (6, 18),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.45,
+                    (0, 255, 0),
+                    1,
+                )
+                cv2.imshow("Preview (leve)", preview_frame)
+
+            if not args.headless or args.preview:
                 if cv2.waitKey(1) & 0xFF == ord("x"):
                     break
     except KeyboardInterrupt:

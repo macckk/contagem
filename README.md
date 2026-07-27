@@ -124,8 +124,9 @@ detectado mas não contado, ou simplesmente não passou perto da linha ainda.
 ### Fase 3/4 — pipeline completo (grava no Supabase)
 
 ```bash
-python scripts/03_pipeline.py             # com janela de vídeo
-python scripts/03_pipeline.py --headless  # sem janela, só console (teste de campo)
+python scripts/03_pipeline.py                      # com janela de vídeo
+python scripts/03_pipeline.py --headless           # sem janela, só console (teste de campo)
+python scripts/03_pipeline.py --headless --preview # só console + janelinha leve de vídeo
 ```
 
 Cada cruzamento de linha gera um insert em `contagem_eventos`
@@ -133,6 +134,19 @@ Cada cruzamento de linha gera um insert em `contagem_eventos`
 `--headless` para deixar rodando por algumas horas em horário de movimento e
 depois comparar o total agregado no Supabase (filtrando por `tipo`) com uma
 contagem manual.
+
+`--preview` mostra uma janelinha (480px de largura) só com o vídeo cru
+redimensionado + contadores/FPS em texto — sem desenhar caixas/zonas (que
+exigem `result.plot()`, mais custoso), pra acompanhar visualmente um teste
+`--headless` de longa duração sem pesar no processamento. Pode ser
+combinado com `--headless` ou usado sozinho.
+
+Se a conexão RTSP cair no meio do teste (câmera reiniciou, Wi-Fi caiu,
+etc.), o script **não encerra mais** — ele fica tentando reconectar a cada
+5s indefinidamente (mensagem `Conexão com a câmera perdida - tentando
+reconectar...` no console) e retoma o monitoramento assim que a câmera
+volta, mantendo as contagens acumuladas até ali. Só encerra de fato com
+`x` na janela (se houver) ou `Ctrl+C` no terminal.
 
 ### GPU e FPS
 
