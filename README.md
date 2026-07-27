@@ -135,11 +135,11 @@ Cada cruzamento de linha gera um insert em `contagem_eventos`
 depois comparar o total agregado no Supabase (filtrando por `tipo`) com uma
 contagem manual.
 
-`--preview` mostra uma janelinha (480px de largura) só com o vídeo cru
-redimensionado + contadores/FPS em texto — sem desenhar caixas/zonas (que
-exigem `result.plot()`, mais custoso), pra acompanhar visualmente um teste
-`--headless` de longa duração sem pesar no processamento. Pode ser
-combinado com `--headless` ou usado sozinho.
+`--preview` mostra uma janelinha (360px de largura) só com o vídeo cru
+redimensionado, sem nenhum texto/caixas/zonas (que exigem `result.plot()`,
+mais custoso), pra acompanhar visualmente um teste `--headless` de longa
+duração sem pesar no processamento. Pode ser combinado com `--headless` ou
+usado sozinho.
 
 Se a conexão RTSP cair no meio do teste (câmera reiniciou, Wi-Fi caiu,
 etc.), o script **não encerra mais** — ele fica tentando reconectar a cada

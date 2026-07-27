@@ -273,21 +273,13 @@ def main():
                 cv2.imshow("Fase 3 - Pipeline completo", annotated)
 
             if args.preview:
-                # Janela leve: so redimensiona o frame cru (sem caixas/zonas,
-                # que exigem result.plot() - mais custoso) para acompanhar o
-                # teste de campo em --headless sem pesar no processamento.
-                preview_w = 480
+                # Janela leve: so redimensiona o frame cru (sem caixas/zonas
+                # nem texto, que exigem result.plot()/putText - mais custoso)
+                # para acompanhar o teste de campo em --headless sem pesar
+                # no processamento.
+                preview_w = 360
                 scale = preview_w / frame.shape[1]
                 preview_frame = cv2.resize(frame, (preview_w, int(frame.shape[0] * scale)))
-                cv2.putText(
-                    preview_frame,
-                    f"{texto}  FPS: {fps:.1f}",
-                    (6, 18),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    0.45,
-                    (0, 255, 0),
-                    1,
-                )
                 cv2.imshow("Preview (leve)", preview_frame)
 
             if not args.headless or args.preview:
