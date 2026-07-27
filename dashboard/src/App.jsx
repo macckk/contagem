@@ -38,18 +38,33 @@ export default function App() {
     setLoading(true);
     setError(null);
     try {
-      let query = supabase
-        .from("contagem_eventos")
-        .select("id, track_id, tipo, confianca, timestamp")
-        .order("timestamp", { ascending: true })
-        .limit(20000);
-
       const since = rangeStartFor(range);
-      if (since) query = query.gte("timestamp", since.toISOString());
 
-      const { data, error: qError } = await query;
-      if (qError) throw qError;
-      setEvents(data ?? []);
+      // A API do Supabase (PostgREST) limita cada resposta a "db-max-rows"
+      // (1000 por padrao), mesmo pedindo um .limit() maior - entao paginamos
+      // com .range() ate a pagina voltar vazia/incompleta, para trazer todos
+      // os eventos do periodo, nao so os primeiros 1000.
+      const pageSize = 1000;
+      let all = [];
+      let from = 0;
+      while (true) {
+        let query = supabase
+          .from("contagem_eventos")
+          .select("id, track_id, tipo, confianca, timestamp")
+          .order("timestamp", { ascending: true })
+          .range(from, from + pageSize - 1);
+
+        if (since) query = query.gte("timestamp", since.toISOString());
+
+        const { data, error: qError } = await query;
+        if (qError) throw qError;
+
+        all = all.concat(data ?? []);
+        if (!data || data.length < pageSize) break;
+        from += pageSize;
+      }
+
+      setEvents(all);
       setLastUpdated(new Date());
     } catch (err) {
       setError(err.message ?? "Falha ao carregar dados do Supabase.");
