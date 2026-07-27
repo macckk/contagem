@@ -237,9 +237,18 @@ A zona noturna usa a linha `LINE_VEICULOS_NOITE_*` se calibrada (ver seção
 de calibração acima), ou cai para a linha de veículos do dia (`LINE_VEICULOS_*`)
 como padrão. Na janela de vídeo, as duas zonas (dia em magenta,
 `DAY_ZONE_WIDTH_PX` pixels de cada lado da linha; noite em ciano,
-`NIGHT_ZONE_WIDTH_PX`) aparecem sempre desenhadas como retângulos
-translúcidos, facilitando ver exatamente a área usada na contagem em
-qualquer horário.
+`NIGHT_ZONE_WIDTH_PX`, padrão `220`) aparecem sempre desenhadas como
+retângulos translúcidos, facilitando ver exatamente a área usada na
+contagem em qualquer horário.
+
+**Importante**: a checagem usa distância ao *segmento* da linha (não à reta
+infinita) — um veículo que passe fora da extensão horizontal/vertical da
+linha calibrada nunca vai cair "perto" dela, mesmo com confiança alta,
+mesmo aumentando `*_ZONE_WIDTH_PX`. Ao calibrar (`scripts/calibrar_linha.py`),
+estique a linha ponta a ponta cobrindo toda a largura da via por onde
+veículos passam (todas as faixas), não só o trecho onde eles costumam
+aparecer com mais confiança — senão veículos em faixas fora do alcance da
+linha são detectados mas nunca contados.
 
 ## Estrutura
 
