@@ -85,12 +85,21 @@ def main():
     classes = [config.PERSON_CLASS_ID]
     if line_veiculos is not None:
         line_veiculos_noite = config.get_line_veiculos_noite()
+        # Compartilhado entre os contadores de dia e de noite do mesmo tipo,
+        # para o dedupe por posicao+tempo enxergar fragmentos do mesmo
+        # veiculo fisico mesmo que a classificacao dia/noite mude no meio
+        # da passagem (ver ZoneCooldownCounter em src/zone_counter.py).
+        dedupe_compartilhado = {
+            nome: {"counted_track_ids": set(), "recent": []}
+            for nome in config.VEHICLE_CLASS_IDS.values()
+        }
         counters_veiculos_dia = {
             nome: ZoneCooldownCounter(
                 *line_veiculos,
                 zone_width=config.DAY_ZONE_WIDTH_PX,
                 cooldown_seconds=config.DAY_ZONE_COOLDOWN_SECONDS,
                 dedupe_distance=config.DAY_ZONE_DEDUPE_DISTANCE_PX,
+                shared_state=dedupe_compartilhado[nome],
             )
             for nome in config.VEHICLE_CLASS_IDS.values()
         }
@@ -100,6 +109,7 @@ def main():
                 zone_width=config.NIGHT_ZONE_WIDTH_PX,
                 cooldown_seconds=config.NIGHT_ZONE_COOLDOWN_SECONDS,
                 dedupe_distance=config.NIGHT_ZONE_DEDUPE_DISTANCE_PX,
+                shared_state=dedupe_compartilhado[nome],
             )
             for nome in config.VEHICLE_CLASS_IDS.values()
         }

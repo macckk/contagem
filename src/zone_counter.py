@@ -58,16 +58,25 @@ class ZoneCooldownCounter:
     """Conta uma deteccao como "passou" quando cai dentro de uma faixa ao
     redor da linha, deduplicando por proximidade+tempo (nao so por track_id)
     para tolerar tracking fragmentado.
+
+    O dedupe (track_ids ja contados + posicoes recentes) pode ser
+    compartilhado entre varias instancias via 'shared_state' - usado para as
+    zonas de dia e de noite do mesmo tipo de veiculo nao contarem o mesmo
+    veiculo fisico 2x quando o tracking fragmenta (gera um track_id novo)
+    bem no momento em que a classificacao dia/noite muda: sem
+    compartilhar, cada instancia so ve seu proprio historico e nao sabe que
+    o outro fragmento ja foi contado na outra zona. 'total' continua
+    proprio de cada instancia, para manter a quebra dia/noite no relatorio
+    final.
     """
 
-    def __init__(self, p1, p2, zone_width, cooldown_seconds, dedupe_distance):
+    def __init__(self, p1, p2, zone_width, cooldown_seconds, dedupe_distance, shared_state=None):
         self.p1 = p1
         self.p2 = p2
         self.zone_width = zone_width
         self.cooldown_seconds = cooldown_seconds
         self.dedupe_distance = dedupe_distance
-        self._counted_track_ids = set()
-        self._recent = []  # [(timestamp, x, y), ...] - ja e por-tipo (1 instancia por tipo)
+        self._shared = shared_state if shared_state is not None else {"counted_track_ids": set(), "recent": []}
         self.total = 0
 
     @staticmethod
@@ -78,12 +87,10 @@ class ZoneCooldownCounter:
     def _in_zone(self, point):
         return _point_segment_distance(self.p1, self.p2, point) <= self.zone_width
 
-    def _prune_recent(self, now):
-        self._recent = [r for r in self._recent if now - r[0] <= self.cooldown_seconds]
-
     def update(self, track_id: int, xyxy, now: float = None) -> bool:
         """Retorna True se essa deteccao foi contada agora pela primeira vez."""
-        if track_id in self._counted_track_ids:
+        counted_track_ids = self._shared["counted_track_ids"]
+        if track_id in counted_track_ids:
             return False
 
         point = self.bbox_bottom_center(xyxy)
@@ -91,16 +98,18 @@ class ZoneCooldownCounter:
             return False
 
         now = time.time() if now is None else now
-        self._prune_recent(now)
+        recent = self._shared["recent"]
+        recent[:] = [r for r in recent if now - r[0] <= self.cooldown_seconds]
 
-        for _, x, y in self._recent:
+        for _, x, y in recent:
             if math.hypot(point[0] - x, point[1] - y) <= self.dedupe_distance:
-                # Mesmo veiculo fisico (track fragmentado) - nao conta de novo,
-                # mas marca esse track_id para nao reavaliar a cada frame.
-                self._counted_track_ids.add(track_id)
+                # Mesmo veiculo fisico (track fragmentado, possivelmente na
+                # outra zona dia/noite) - nao conta de novo, mas marca esse
+                # track_id para nao reavaliar a cada frame.
+                counted_track_ids.add(track_id)
                 return False
 
-        self._counted_track_ids.add(track_id)
-        self._recent.append((now, point[0], point[1]))
+        counted_track_ids.add(track_id)
+        recent.append((now, point[0], point[1]))
         self.total += 1
         return True
