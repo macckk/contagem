@@ -112,6 +112,7 @@ def main():
         return dia + noite
 
     print_device_info(config.DEVICE)
+    print(f"OpenCL (cv2) disponivel para preprocess noturno: {cv2.ocl.haveOpenCL()}")
     use_half = config.HALF_PRECISION and should_use_half(config.DEVICE)
     quantize = 16 if use_half else 32
     model = YOLO(config.MODEL_PATH)

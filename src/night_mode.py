@@ -44,14 +44,22 @@ def preprocess_night(frame):
     ja 100% saturados pelo farol (nao ha informacao ali para recuperar), mas
     melhora a definicao das bordas do veiculo nas regioes proximas,
     parcialmente iluminadas.
+
+    Roda via cv2.UMat (Transparent API) para que, se o OpenCV tiver OpenCL
+    disponivel, essas conversoes/CLAHE sejam descarregadas na GPU em vez de
+    competir por CPU com a captura/decode RTSP - o que ajuda a segurar o FPS
+    a noite. Se OpenCL nao estiver disponivel, o OpenCV cai para CPU
+    automaticamente (mesmo resultado, sem ganho de velocidade).
     """
-    denoised = cv2.GaussianBlur(frame, (3, 3), 0)
+    src = cv2.UMat(frame)
+    denoised = cv2.GaussianBlur(src, (3, 3), 0)
     lab = cv2.cvtColor(denoised, cv2.COLOR_BGR2LAB)
     l_channel, a_channel, b_channel = cv2.split(lab)
     clahe = cv2.createCLAHE(clipLimit=config.NIGHT_CLAHE_CLIP_LIMIT, tileGridSize=(8, 8))
     l_channel = clahe.apply(l_channel)
     lab = cv2.merge((l_channel, a_channel, b_channel))
-    return cv2.cvtColor(lab, cv2.COLOR_LAB2BGR)
+    result = cv2.cvtColor(lab, cv2.COLOR_LAB2BGR)
+    return result.get()
 
 
 def prepare_frame_for_detection(frame):
