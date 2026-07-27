@@ -139,6 +139,14 @@ def main():
     # aparece e mantido daí em diante.
     track_tipo = {}
 
+    # Guarda os track_ids de veiculo ja contados, compartilhado entre os
+    # contadores de dia e de noite. Sem isso, um mesmo veiculo fisico pode
+    # ser contado 2x se a classificacao dia/noite (is_night) oscilar entre
+    # frames perto do limiar (amanhecer/anoitecer, ou saturacao de cor no
+    # limite) enquanto o track_id ainda esta ativo - cada contador
+    # (ZoneCooldownCounter) so sabe deduplicar dentro de si mesmo.
+    veiculo_track_ids_contados = set()
+
     # Acumuladores de tempo (preprocess de noite vs inferencia) para o print
     # periodico abaixo - ajuda a isolar se uma queda de FPS a noite vem do
     # CLAHE/blur (CPU) ou da propria inferencia do YOLO.
@@ -213,6 +221,8 @@ def main():
                     if tipo == "pessoa":
                         crossed = counter_pessoas.update(track_id, xyxy)
                         total = counter_pessoas.total
+                    elif track_id in veiculo_track_ids_contados:
+                        continue
                     elif is_night:
                         if conf < config.NIGHT_ZONE_MIN_CONF:
                             continue
@@ -228,6 +238,7 @@ def main():
                         if tipo == "pessoa":
                             origem = "linha"
                         else:
+                            veiculo_track_ids_contados.add(track_id)
                             origem = "zona-noite" if is_night else "zona-dia"
                         print(f"{tipo} track_id={track_id} conf={conf:.2f} -> contado ({origem}, total {tipo}: {total})")
 

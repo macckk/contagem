@@ -253,6 +253,17 @@ veículo e ignorada.
 Pessoas não são afetadas por essa mudança — continuam contadas por
 cruzamento de linha (`LineCrossingCounter`).
 
+**Double-count entre zona de dia e de noite**: os contadores de dia e de
+noite são instâncias separadas de `ZoneCooldownCounter`, cada uma só
+deduplica dentro de si mesma. Se a classificação dia/noite (`is_night`,
+por saturação de cor) oscilar entre frames — comum no amanhecer/anoitecer,
+ou quando a saturação fica bem perto de `NIGHT_SATURATION_THRESHOLD` —
+o mesmo `track_id` podia ser contado uma vez pelo contador de dia e de
+novo pelo de noite. Os scripts 02/03 agora guardam um conjunto
+`veiculo_track_ids_contados`, compartilhado entre os dois contadores: uma
+vez que um `track_id` é contado (em qualquer um dos dois), ele nunca é
+reavaliado, mesmo que o frame seguinte mude de classificação dia/noite.
+
 A zona noturna usa a linha `LINE_VEICULOS_NOITE_*` se calibrada (ver seção
 de calibração acima), ou cai para a linha de veículos do dia (`LINE_VEICULOS_*`)
 como padrão. Na janela de vídeo, as duas zonas (dia em magenta,
