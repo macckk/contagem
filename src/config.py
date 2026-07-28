@@ -129,3 +129,26 @@ def get_line_veiculos_noite():
     """
     linha_noite = _get_line("LINE_VEICULOS_NOITE_")
     return linha_noite if linha_noite is not None else get_line_veiculos()
+
+
+def get_exclude_zones():
+    """Retorna uma lista de retangulos [(x1, y1, x2, y2), ...] a ignorar na
+    deteccao (ex: um carro estacionado, um quintal fora da rua, gerando
+    falsos positivos). Configurado via EXCLUDE_ZONES no .env, no formato
+    "x1,y1,x2,y2;x1,y1,x2,y2;..." (um retangulo por bloco, separados por
+    ";"). Gerado por 'python scripts/calibrar_linha.py --alvo exclusao'.
+    """
+    raw = os.getenv("EXCLUDE_ZONES", "").strip()
+    if not raw:
+        return []
+    zones = []
+    for bloco in raw.split(";"):
+        bloco = bloco.strip()
+        if not bloco:
+            continue
+        partes = [p.strip() for p in bloco.split(",")]
+        if len(partes) != 4:
+            continue
+        x1, y1, x2, y2 = (float(p) for p in partes)
+        zones.append((x1, y1, x2, y2))
+    return zones

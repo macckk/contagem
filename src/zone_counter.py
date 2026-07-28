@@ -37,6 +37,18 @@ def zone_polygon(p1, p2, width):
     ]
 
 
+def point_in_any_rect(rects, point):
+    """True se 'point' cai dentro de algum retangulo (x1, y1, x2, y2) da
+    lista - usado para excluir uma area do quadro (EXCLUDE_ZONES) que gera
+    falsos positivos, antes mesmo de entrar no tracking/contagem.
+    """
+    px, py = point
+    for x1, y1, x2, y2 in rects:
+        if min(x1, x2) <= px <= max(x1, x2) and min(y1, y2) <= py <= max(y1, y2):
+            return True
+    return False
+
+
 def _point_segment_distance(p1, p2, point):
     """Distancia do ponto ao segmento de reta p1-p2 (nao a reta infinita)."""
     x1, y1 = p1

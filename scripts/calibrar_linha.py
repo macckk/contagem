@@ -8,12 +8,21 @@ Uso:
     python scripts/calibrar_linha.py                          # linha de pessoas (calcada)
     python scripts/calibrar_linha.py --alvo veiculos           # linha de veiculos (via), de dia
     python scripts/calibrar_linha.py --alvo veiculos-noite     # linha de veiculos a noite (rode isso de noite!)
+    python scripts/calibrar_linha.py --alvo exclusao           # retangulo de area a ignorar na deteccao
 
 A linha de veiculos-noite e opcional: se nao for calibrada, a contagem
 noturna usa a mesma linha/zona de veiculos do dia. Vale calibrar separado
 porque a noite o veiculo costuma ser detectado com mais confianca assim
 que entra no quadro (antes do farol saturar a cena de perto) - um lugar
 diferente do ponto ideal para a linha de dia.
+
+O modo "exclusao" e diferente dos outros: em vez de uma linha, os 2 pontos
+clicados definem os cantos opostos de um retangulo (EXCLUDE_ZONES no .env)
+- qualquer deteccao com o centro dentro dele e ignorada, antes mesmo do
+tracking/contagem. Util pra silenciar uma area do quadro que gera falsos
+positivos (ex: um carro estacionado, um quintal fora da rua). Pode ter
+mais de um retangulo: rode de novo e junte os blocos com ";" no .env
+(formato "x1,y1,x2,y2;x1,y1,x2,y2").
 """
 import argparse
 import sys
@@ -38,15 +47,18 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--alvo",
-        choices=["pessoas", "veiculos", "veiculos-noite"],
+        choices=["pessoas", "veiculos", "veiculos-noite", "exclusao"],
         default="pessoas",
-        help="Qual linha calibrar: pessoas (calcada), veiculos (via, de dia) ou veiculos-noite. Padrao: pessoas.",
+        help="Qual calibrar: pessoas (calcada), veiculos (via, de dia), veiculos-noite ou "
+        "exclusao (retangulo de area a ignorar na deteccao). Padrao: pessoas.",
     )
     args = parser.parse_args()
+    is_exclusao = args.alvo == "exclusao"
     env_prefix = {
         "pessoas": "LINE_",
         "veiculos": "LINE_VEICULOS_",
         "veiculos-noite": "LINE_VEICULOS_NOITE_",
+        "exclusao": "EXCLUDE_",
     }[args.alvo]
 
     if not config.RTSP_URL:
@@ -70,7 +82,10 @@ def main():
         for p in points:
             cv2.circle(display, p, 5, (0, 0, 255), -1)
         if len(points) == 2:
-            cv2.line(display, points[0], points[1], (0, 255, 0), 2)
+            if is_exclusao:
+                cv2.rectangle(display, points[0], points[1], (0, 0, 255), 2)
+            else:
+                cv2.line(display, points[0], points[1], (0, 255, 0), 2)
 
         cv2.imshow(window, display)
         key = cv2.waitKey(20) & 0xFF
@@ -82,11 +97,15 @@ def main():
 
     if len(points) == 2:
         (x1, y1), (x2, y2) = points
-        print("\nAdicione ao seu .env:")
-        print(f"{env_prefix}X1={x1}")
-        print(f"{env_prefix}Y1={y1}")
-        print(f"{env_prefix}X2={x2}")
-        print(f"{env_prefix}Y2={y2}")
+        if is_exclusao:
+            print("\nAdicione ao seu .env (junte com ';' se ja tiver outro retangulo):")
+            print(f"EXCLUDE_ZONES={x1},{y1},{x2},{y2}")
+        else:
+            print("\nAdicione ao seu .env:")
+            print(f"{env_prefix}X1={x1}")
+            print(f"{env_prefix}Y1={y1}")
+            print(f"{env_prefix}X2={x2}")
+            print(f"{env_prefix}Y2={y2}")
     else:
         print("Calibracao cancelada (menos de 2 pontos definidos).")
 

@@ -40,7 +40,7 @@ from src.fps_meter import FPSMeter
 from src.line_crossing import LineCrossingCounter
 from src.night_mode import prepare_frame_for_detection
 from src.rtsp_client import RTSPClient
-from src.zone_counter import ZoneCooldownCounter, zone_polygon
+from src.zone_counter import ZoneCooldownCounter, point_in_any_rect, zone_polygon
 
 
 def draw_zone(frame, p1, p2, width_px, color):
@@ -75,6 +75,10 @@ def main():
         )
     counter_pessoas = LineCrossingCounter(*line_pessoas)
     draw_pessoas = tuple((int(p[0]), int(p[1])) for p in line_pessoas)
+
+    exclude_zones = config.get_exclude_zones()
+    if exclude_zones:
+        print(f"{len(exclude_zones)} area(s) de exclusao carregada(s) de EXCLUDE_ZONES.")
 
     line_veiculos = config.get_line_veiculos()
     line_veiculos_noite = None
@@ -207,6 +211,8 @@ def main():
             if counters_veiculos_dia is not None:
                 draw_zone(annotated, *line_veiculos, config.DAY_ZONE_WIDTH_PX, (255, 0, 255))
                 draw_zone(annotated, *line_veiculos_noite, config.NIGHT_ZONE_WIDTH_PX, (255, 255, 0))
+            for ex1, ey1, ex2, ey2 in exclude_zones:
+                cv2.rectangle(annotated, (int(ex1), int(ey1)), (int(ex2), int(ey2)), (0, 0, 255), 2)
 
             boxes = result.boxes
             if boxes is not None and boxes.id is not None:
@@ -218,6 +224,13 @@ def main():
                     if args.debug:
                         nome = CLASS_NAMES.get(cls_id, f"classe_{cls_id}")
                         print(f"[debug] {nome} track_id={track_id} conf={conf:.2f}")
+
+                    if exclude_zones and point_in_any_rect(
+                        exclude_zones, ZoneCooldownCounter.bbox_bottom_center(xyxy)
+                    ):
+                        if args.debug:
+                            print("[debug]   -> ignorado (dentro de EXCLUDE_ZONES)")
+                        continue
 
                     if track_id not in track_tipo:
                         if cls_id == config.PERSON_CLASS_ID:

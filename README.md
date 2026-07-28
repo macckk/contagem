@@ -278,6 +278,30 @@ cada instância (pra manter a quebra dia/noite no relatório final), mas o
 que decide "já contei esse veículo" é compartilhado — resolvendo os dois
 problemas de uma vez.
 
+### Área de exclusão (`EXCLUDE_ZONES`)
+
+Se uma região do quadro gera falsos positivos (um carro estacionado, um
+quintal fora da rua, etc.), dá pra ignorá-la completamente. Calibre com:
+
+```bash
+python scripts/calibrar_linha.py --alvo exclusao
+```
+
+Clique 2 pontos — os cantos opostos do retângulo a ignorar — e cole o
+resultado no `.env`:
+
+```
+EXCLUDE_ZONES=x1,y1,x2,y2
+```
+
+Para mais de um retângulo, rode de novo e junte os blocos com `;`:
+`EXCLUDE_ZONES=x1,y1,x2,y2;x1,y1,x2,y2`. A checagem usa o mesmo ponto de
+contato do `ZoneCooldownCounter` (base da caixa) — qualquer detecção cuja
+base caia dentro de um desses retângulos é descartada **antes** do
+tracking/contagem (não aparece nem no `--debug` além de uma linha
+"ignorado"). Os retângulos aparecem desenhados em vermelho na janela de
+vídeo (`02_tracking.py` e `03_pipeline.py`, quando não `--headless`).
+
 A zona noturna usa a linha `LINE_VEICULOS_NOITE_*` se calibrada (ver seção
 de calibração acima), ou cai para a linha de veículos do dia (`LINE_VEICULOS_*`)
 como padrão. Na janela de vídeo, as duas zonas (dia em magenta,
