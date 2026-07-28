@@ -57,6 +57,22 @@ export function aggregateByHour(events) {
   return slots;
 }
 
+export function aggregateByDay(events) {
+  const porDia = new Map();
+  for (const e of events) {
+    const d = new Date(e.timestamp);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    if (!porDia.has(key)) {
+      const label = `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}`;
+      porDia.set(key, { key, label, pessoas: 0, veiculos: 0 });
+    }
+    const slot = porDia.get(key);
+    if (e.tipo === "pessoa") slot.pessoas += 1;
+    else slot.veiculos += 1;
+  }
+  return Array.from(porDia.values()).sort((a, b) => a.key.localeCompare(b.key));
+}
+
 export function aggregateByTipoVeiculo(events) {
   const counts = {};
   for (const e of events) {

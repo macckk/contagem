@@ -383,6 +383,9 @@ body {
 @media (max-width: 900px) {
   .charts-grid { grid-template-columns: 1fr; }
 }
+.charts-grid-single {
+  grid-template-columns: 1fr;
+}
 .chart-card {
   padding: 20px 20px 8px;
   display: flex;

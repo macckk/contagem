@@ -5,11 +5,13 @@ import StatTile from "./components/StatTile.jsx";
 import ConfidenceCard from "./components/ConfidenceCard.jsx";
 import LineChartCrossings from "./components/LineChartCrossings.jsx";
 import BarChartTipos from "./components/BarChartTipos.jsx";
+import BarChartPorDia from "./components/BarChartPorDia.jsx";
 import TableView from "./components/TableView.jsx";
 import {
   rangeStartFor,
   computeStats,
   aggregateByHour,
+  aggregateByDay,
   aggregateByTipoVeiculo,
   confidenceHistogram,
 } from "./lib/aggregate.js";
@@ -84,6 +86,7 @@ export default function App() {
 
   const stats = useMemo(() => computeStats(filtered), [filtered]);
   const byHour = useMemo(() => aggregateByHour(filtered), [filtered]);
+  const byDay = useMemo(() => aggregateByDay(filtered), [filtered]);
   const byTipo = useMemo(() => aggregateByTipoVeiculo(filtered), [filtered]);
   const histogram = useMemo(() => confidenceHistogram(filtered), [filtered]);
 
@@ -159,6 +162,9 @@ export default function App() {
           <div className="charts-grid">
             <LineChartCrossings data={byHour} />
             <BarChartTipos data={byTipo} />
+          </div>
+          <div className="charts-grid charts-grid-single">
+            <BarChartPorDia data={byDay} />
           </div>
           <TableView events={filtered} />
         </>
