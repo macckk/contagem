@@ -5,7 +5,7 @@ export default function BarChartPorDia({ data }) {
   return (
     <div className="glass-card chart-card">
       <h3>Total por dia</h3>
-      <p className="chart-sub">Pessoas vs. veículos, agrupado por dia do mês</p>
+      <p className="chart-sub">Pessoas vs. veículos, últimos 7 dias</p>
       <div className="legend-row">
         <span className="legend-item">
           <span className="stat-dot" style={{ background: "var(--series-pessoas)" }} />

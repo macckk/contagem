@@ -86,7 +86,7 @@ export default function App() {
 
   const stats = useMemo(() => computeStats(filtered), [filtered]);
   const byHour = useMemo(() => aggregateByHour(filtered), [filtered]);
-  const byDay = useMemo(() => aggregateByDay(filtered), [filtered]);
+  const byDay = useMemo(() => aggregateByDay(filtered).slice(-7), [filtered]);
   const byTipo = useMemo(() => aggregateByTipoVeiculo(filtered), [filtered]);
   const histogram = useMemo(() => confidenceHistogram(filtered), [filtered]);
 
