@@ -22,10 +22,38 @@ function getInitialTheme() {
   return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
 
+// A API do Supabase (PostgREST) limita cada resposta a "db-max-rows" (1000
+// por padrao), mesmo pedindo um .limit() maior - entao paginamos com
+// .range() ate a pagina voltar vazia/incompleta, para trazer todos os
+// eventos do periodo, nao so os primeiros 1000.
+async function fetchEventsSince(since) {
+  const pageSize = 1000;
+  let all = [];
+  let from = 0;
+  while (true) {
+    let query = supabase
+      .from("contagem_eventos")
+      .select("id, track_id, tipo, confianca, timestamp")
+      .order("timestamp", { ascending: true })
+      .range(from, from + pageSize - 1);
+
+    if (since) query = query.gte("timestamp", since.toISOString());
+
+    const { data, error: qError } = await query;
+    if (qError) throw qError;
+
+    all = all.concat(data ?? []);
+    if (!data || data.length < pageSize) break;
+    from += pageSize;
+  }
+  return all;
+}
+
 export default function App() {
   const [range, setRange] = useState("hoje");
   const [confMin, setConfMin] = useState(0);
   const [events, setEvents] = useState([]);
+  const [events7d, setEvents7d] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [lastUpdated, setLastUpdated] = useState(null);
@@ -40,33 +68,18 @@ export default function App() {
     setLoading(true);
     setError(null);
     try {
-      const since = rangeStartFor(range);
-
-      // A API do Supabase (PostgREST) limita cada resposta a "db-max-rows"
-      // (1000 por padrao), mesmo pedindo um .limit() maior - entao paginamos
-      // com .range() ate a pagina voltar vazia/incompleta, para trazer todos
-      // os eventos do periodo, nao so os primeiros 1000.
-      const pageSize = 1000;
-      let all = [];
-      let from = 0;
-      while (true) {
-        let query = supabase
-          .from("contagem_eventos")
-          .select("id, track_id, tipo, confianca, timestamp")
-          .order("timestamp", { ascending: true })
-          .range(from, from + pageSize - 1);
-
-        if (since) query = query.gte("timestamp", since.toISOString());
-
-        const { data, error: qError } = await query;
-        if (qError) throw qError;
-
-        all = all.concat(data ?? []);
-        if (!data || data.length < pageSize) break;
-        from += pageSize;
-      }
-
-      setEvents(all);
+      // O grafico "Total por dia" sempre mostra os ultimos 7 dias,
+      // independente do filtro de periodo escolhido acima (ex: se o
+      // usuario esta em "Hoje", ainda queremos comparar com os dias
+      // anteriores) - por isso busca numa janela fixa, separada de
+      // 'events'.
+      const seteDiasAtras = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      const [principal, ultimos7Dias] = await Promise.all([
+        fetchEventsSince(rangeStartFor(range)),
+        fetchEventsSince(seteDiasAtras),
+      ]);
+      setEvents(principal);
+      setEvents7d(ultimos7Dias);
       setLastUpdated(new Date());
     } catch (err) {
       setError(err.message ?? "Falha ao carregar dados do Supabase.");
@@ -83,10 +96,14 @@ export default function App() {
     () => events.filter((e) => (e.confianca ?? 0) >= confMin),
     [events, confMin]
   );
+  const filtered7d = useMemo(
+    () => events7d.filter((e) => (e.confianca ?? 0) >= confMin),
+    [events7d, confMin]
+  );
 
   const stats = useMemo(() => computeStats(filtered), [filtered]);
   const byHour = useMemo(() => aggregateByHour(filtered), [filtered]);
-  const byDay = useMemo(() => aggregateByDay(filtered).slice(-7), [filtered]);
+  const byDay = useMemo(() => aggregateByDay(filtered7d).slice(-7), [filtered7d]);
   const byTipo = useMemo(() => aggregateByTipoVeiculo(filtered), [filtered]);
   const histogram = useMemo(() => confidenceHistogram(filtered), [filtered]);
 
@@ -153,20 +170,24 @@ export default function App() {
         />
       </div>
 
-      {!loading && filtered.length === 0 ? (
+      {!loading && filtered.length === 0 && byDay.length === 0 ? (
         <div className="glass-card empty-state">
           Nenhum evento encontrado para os filtros atuais.
         </div>
       ) : (
         <>
-          <div className="charts-grid">
-            <LineChartCrossings data={byHour} />
-            <BarChartTipos data={byTipo} />
-          </div>
-          <div className="charts-grid charts-grid-single">
-            <BarChartPorDia data={byDay} />
-          </div>
-          <TableView events={filtered} />
+          {filtered.length > 0 && (
+            <div className="charts-grid">
+              <LineChartCrossings data={byHour} />
+              <BarChartTipos data={byTipo} />
+            </div>
+          )}
+          {byDay.length > 0 && (
+            <div className="charts-grid charts-grid-single">
+              <BarChartPorDia data={byDay} />
+            </div>
+          )}
+          {filtered.length > 0 && <TableView events={filtered} />}
         </>
       )}
 
