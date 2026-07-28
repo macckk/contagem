@@ -287,20 +287,22 @@ quintal fora da rua, etc.), dá pra ignorá-la completamente. Calibre com:
 python scripts/calibrar_linha.py --alvo exclusao
 ```
 
-Clique 2 pontos — os cantos opostos do retângulo a ignorar — e cole o
-resultado no `.env`:
+Clique 4 pontos — os vértices do polígono a ignorar, na ordem (não precisa
+ser um retângulo perfeito, dá pra acompanhar um muro em diagonal, por
+exemplo) — e cole o resultado no `.env`:
 
 ```
-EXCLUDE_ZONES=x1,y1,x2,y2
+EXCLUDE_ZONES=x1,y1,x2,y2,x3,y3,x4,y4
 ```
 
-Para mais de um retângulo, rode de novo e junte os blocos com `;`:
-`EXCLUDE_ZONES=x1,y1,x2,y2;x1,y1,x2,y2`. A checagem usa o mesmo ponto de
-contato do `ZoneCooldownCounter` (base da caixa) — qualquer detecção cuja
-base caia dentro de um desses retângulos é descartada **antes** do
-tracking/contagem (não aparece nem no `--debug` além de uma linha
-"ignorado"). Os retângulos aparecem desenhados em vermelho na janela de
-vídeo (`02_tracking.py` e `03_pipeline.py`, quando não `--headless`).
+Para mais de uma área, rode de novo e junte os blocos com `;`:
+`EXCLUDE_ZONES=x1,y1,x2,y2,x3,y3,x4,y4;x1,y1,x2,y2,x3,y3,x4,y4`. A checagem
+(`_point_in_polygon` em `src/zone_counter.py`, ray casting) usa o mesmo
+ponto de contato do `ZoneCooldownCounter` (base da caixa) — qualquer
+detecção cuja base caia dentro de um desses polígonos é descartada
+**antes** do tracking/contagem (não aparece nem no `--debug` além de uma
+linha "ignorado"). Os polígonos aparecem desenhados em vermelho na janela
+de vídeo (`02_tracking.py` e `03_pipeline.py`, quando não `--headless`).
 
 A zona noturna usa a linha `LINE_VEICULOS_NOITE_*` se calibrada (ver seção
 de calibração acima), ou cai para a linha de veículos do dia (`LINE_VEICULOS_*`)

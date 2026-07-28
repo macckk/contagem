@@ -43,7 +43,7 @@ from src.line_crossing import LineCrossingCounter
 from src.night_mode import prepare_frame_for_detection
 from src.rtsp_client import RTSPClient
 from src.supabase_client import insert_event
-from src.zone_counter import ZoneCooldownCounter, point_in_any_rect, zone_polygon
+from src.zone_counter import ZoneCooldownCounter, point_in_any_polygon, zone_polygon
 
 
 def draw_zone(frame, p1, p2, width_px, color):
@@ -218,7 +218,7 @@ def main():
                     track_id = int(track_id)
                     cls_id = int(cls_id)
 
-                    if exclude_zones and point_in_any_rect(
+                    if exclude_zones and point_in_any_polygon(
                         exclude_zones, ZoneCooldownCounter.bbox_bottom_center(xyxy)
                     ):
                         continue
@@ -282,8 +282,9 @@ def main():
                 if counters_veiculos_dia is not None:
                     draw_zone(annotated, *line_veiculos, config.DAY_ZONE_WIDTH_PX, (255, 0, 255))
                     draw_zone(annotated, *line_veiculos_noite, config.NIGHT_ZONE_WIDTH_PX, (255, 255, 0))
-                for ex1, ey1, ex2, ey2 in exclude_zones:
-                    cv2.rectangle(annotated, (int(ex1), int(ey1)), (int(ex2), int(ey2)), (0, 0, 255), 2)
+                for poligono in exclude_zones:
+                    pts = np.array(poligono, dtype=np.int32)
+                    cv2.polylines(annotated, [pts], isClosed=True, color=(0, 0, 255), thickness=2)
                 cv2.putText(
                     annotated,
                     texto,

@@ -132,11 +132,12 @@ def get_line_veiculos_noite():
 
 
 def get_exclude_zones():
-    """Retorna uma lista de retangulos [(x1, y1, x2, y2), ...] a ignorar na
-    deteccao (ex: um carro estacionado, um quintal fora da rua, gerando
-    falsos positivos). Configurado via EXCLUDE_ZONES no .env, no formato
-    "x1,y1,x2,y2;x1,y1,x2,y2;..." (um retangulo por bloco, separados por
-    ";"). Gerado por 'python scripts/calibrar_linha.py --alvo exclusao'.
+    """Retorna uma lista de poligonos [[(x1,y1), (x2,y2), ...], ...] a
+    ignorar na deteccao (ex: um carro estacionado, um quintal fora da rua,
+    gerando falsos positivos). Configurado via EXCLUDE_ZONES no .env, no
+    formato "x1,y1,x2,y2,x3,y3,x4,y4;..." (pares de coordenadas por
+    poligono, poligonos separados por ";"). Gerado por
+    'python scripts/calibrar_linha.py --alvo exclusao'.
     """
     raw = os.getenv("EXCLUDE_ZONES", "").strip()
     if not raw:
@@ -146,9 +147,9 @@ def get_exclude_zones():
         bloco = bloco.strip()
         if not bloco:
             continue
-        partes = [p.strip() for p in bloco.split(",")]
-        if len(partes) != 4:
+        partes = [float(p.strip()) for p in bloco.split(",")]
+        if len(partes) < 6 or len(partes) % 2 != 0:
             continue
-        x1, y1, x2, y2 = (float(p) for p in partes)
-        zones.append((x1, y1, x2, y2))
+        poligono = list(zip(partes[0::2], partes[1::2]))
+        zones.append(poligono)
     return zones
