@@ -203,6 +203,14 @@ Variáveis: `ENABLE_NIGHT_MODE` (padrão `true`), `NIGHT_SATURATION_THRESHOLD`
 sem modo IR), `NIGHT_CONF_THRESHOLD`, `NIGHT_CLAHE_CLIP_LIMIT`. Quando
 ativo, aparece `[modo noite]` ao lado dos contadores na tela.
 
+O pré-processamento noturno (blur + CLAHE) roda via `cv2.UMat` (Transparent
+API do OpenCV) em vez de array numpy puro — se o OpenCV tiver suporte a
+OpenCL disponível na máquina, essas contas são descarregadas na GPU em vez
+de competir por CPU com a captura/decode RTSP, o que ajuda a segurar o FPS
+à noite (na prática, corta o tempo de preprocess por frame praticamente
+pela metade numa RTX 3060 Ti). Os scripts imprimem
+`OpenCL (cv2) disponivel para preprocess noturno: True/False` ao iniciar.
+
 ### Tracker mais tolerante (`trackers/bytetrack_tolerante.yaml`)
 
 À noite a detecção fica mais intermitente (ruído do modo IR + desfoque de
@@ -386,6 +394,16 @@ usando a chave `anon public` do Supabase (não a `service_role`).
   polling automático).
 - **Cards**: total de pessoas, total de veículos, confiança média (com
   histograma) e horário de pico. **Gráficos**: cruzamentos por hora
-  (pessoas vs. veículos) e total por tipo específico de veículo
-  (carro/moto/ônibus/caminhão/bicicleta). Tabela de dados brutos disponível
-  (colapsável) para acessibilidade/conferência.
+  (pessoas vs. veículos), total por tipo específico de veículo
+  (carro/moto/ônibus/caminhão/bicicleta) e total por dia (pessoas vs.
+  veículos, sempre os últimos 7 dias — busca sua própria janela fixa no
+  Supabase, independente do filtro de período escolhido acima). Tabela de
+  dados brutos disponível (colapsável), limitada aos 50 registros mais
+  recentes, para acessibilidade/conferência.
+- **Tema claro/escuro**: botão ☀️/🌙 no cabeçalho alterna manualmente
+  (persistido em `localStorage`); sem escolha explícita, segue a
+  preferência do sistema operacional/navegador.
+- **Paginação do Supabase**: a API REST (PostgREST) limita cada resposta a
+  1000 linhas por padrão, mesmo pedindo um `.limit()` maior — o dashboard
+  pagina automaticamente com `.range()` até trazer todos os eventos do
+  período, então não há corte de dados em testes de campo longos.
