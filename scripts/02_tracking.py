@@ -238,9 +238,6 @@ def main():
             if counters_veiculos_dia is not None:
                 draw_zone(annotated, *line_veiculos, config.DAY_ZONE_WIDTH_PX, (255, 0, 255))
                 draw_zone(annotated, *line_veiculos_noite, config.NIGHT_ZONE_WIDTH_PX, (255, 255, 0))
-            for poligono in exclude_zones:
-                pts = np.array(poligono, dtype=np.int32)
-                cv2.polylines(annotated, [pts], isClosed=True, color=(0, 0, 255), thickness=2)
 
             boxes = result.boxes
             if boxes is not None and boxes.id is not None:

@@ -316,8 +316,10 @@ Para mais de uma área, rode de novo e junte os blocos com `;`:
 ponto de contato do `ZoneCooldownCounter` (base da caixa) — qualquer
 detecção cuja base caia dentro de um desses polígonos é descartada
 **antes** do tracking/contagem (não aparece nem no `--debug` além de uma
-linha "ignorado"). Os polígonos aparecem desenhados em vermelho na janela
-de vídeo (`02_tracking.py` e `03_pipeline.py`, quando não `--headless`).
+linha "ignorado"). Em `03_pipeline.py` (quando não `--headless`) os
+polígonos aparecem desenhados em vermelho na janela de vídeo; em
+`02_tracking.py` eles ficam ocultos (só a lógica de exclusão roda, sem
+desenhar na tela).
 
 A zona noturna usa a linha `LINE_VEICULOS_NOITE_*` se calibrada (ver seção
 de calibração acima), ou cai para a linha de veículos do dia (`LINE_VEICULOS_*`)
