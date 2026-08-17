@@ -19,14 +19,16 @@ aparece desenhada na tela (translucida) nas duas linhas, dia e noite.
 
 Uso:
     python scripts/02_tracking.py
-    python scripts/02_tracking.py --debug  # mostra no console TODAS as deteccoes,
-                                            # nao so as que sao contadas
+    python scripts/02_tracking.py --debug    # mostra no console TODAS as deteccoes,
+                                              # nao so as que sao contadas
+    python scripts/02_tracking.py --gravar   # salva o video anotado em gravacoes/*.mp4
 
 Pressione 'x' na janela para encerrar (ou Ctrl+C no terminal).
 """
 import argparse
 import sys
 import time
+from datetime import datetime
 from pathlib import Path
 
 import cv2
@@ -61,6 +63,23 @@ def main():
         "--debug",
         action="store_true",
         help="Mostra no console todas as deteccoes do frame (classe, confianca, track_id), nao so as que sao contadas",
+    )
+    parser.add_argument(
+        "--gravar",
+        action="store_true",
+        help="Salva o video anotado (caixas, linhas, zonas, contadores) em gravacoes/*.mp4",
+    )
+    parser.add_argument(
+        "--saida",
+        default=None,
+        help="Caminho do arquivo de video (opcional, so com --gravar). Padrao: gravacoes/tracking_AAAAMMDD_HHMMSS.mp4",
+    )
+    parser.add_argument(
+        "--fps-gravacao",
+        type=float,
+        default=12.0,
+        help="FPS do arquivo gravado (opcional, so com --gravar). Padrao: 12.0 - ajuste para "
+        "perto do FPS real exibido na tela, senao o video grava rapido/lento demais.",
     )
     args = parser.parse_args()
 
@@ -167,6 +186,14 @@ def main():
     preprocess_time_total = 0.0
     inference_time_total = 0.0
     timed_frames = 0
+
+    video_writer = None
+    video_path = None
+    if args.gravar:
+        video_path = Path(args.saida) if args.saida else (
+            Path("gravacoes") / f"tracking_{datetime.now():%Y%m%d_%H%M%S}.mp4"
+        )
+        video_path.parent.mkdir(parents=True, exist_ok=True)
 
     frame_idx = 0
     try:
@@ -294,6 +321,14 @@ def main():
                 2,
             )
 
+            if args.gravar:
+                if video_writer is None:
+                    altura, largura = annotated.shape[:2]
+                    fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+                    video_writer = cv2.VideoWriter(str(video_path), fourcc, args.fps_gravacao, (largura, altura))
+                    print(f"Gravando video em: {video_path} ({args.fps_gravacao} fps)")
+                video_writer.write(annotated)
+
             now = time.time()
             if now - last_fps_print >= 5:
                 if timed_frames > 0:
@@ -316,6 +351,9 @@ def main():
     finally:
         cap.release()
         cv2.destroyAllWindows()
+        if video_writer is not None:
+            video_writer.release()
+            print(f"Video salvo em: {video_path}")
         print(f"\nTotal final -> Pessoas: {counter_pessoas.total}")
         if counters_veiculos_dia is not None:
             total_geral = 0

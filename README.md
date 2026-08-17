@@ -104,7 +104,7 @@ mesma linha de veículos do dia.
 A linha de veículos é opcional — se não for calibrada, os scripts contam só
 pessoas normalmente.
 
-### Fase 2 — tracking + linha (sem gravar nada)
+### Fase 2 — tracking + linha (sem gravar no banco)
 
 ```bash
 python scripts/02_tracking.py
@@ -120,6 +120,13 @@ cruzamento antes de gravar no banco.
 Use `--debug` para ver no console **todas** as detecções (não só as que
 cruzam a linha) — útil pra confirmar se um tipo de veículo está sendo
 detectado mas não contado, ou simplesmente não passou perto da linha ainda.
+
+Use `--gravar` para salvar o vídeo anotado (caixas, linhas, zonas,
+contadores) em `gravacoes/tracking_AAAAMMDD_HHMMSS.mp4` (`--saida` define
+outro caminho). `--fps-gravacao` (padrão `12.0`) ajusta o FPS do arquivo
+gravado — como o `VideoWriter` precisa de um FPS fixo definido de
+antemão, ajuste esse valor perto do FPS real mostrado na tela (impresso a
+cada 5s no console), senão o vídeo grava acelerado ou em câmera lenta.
 
 ### Fase 3/4 — pipeline completo (grava no Supabase)
 
