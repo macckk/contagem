@@ -13,3 +13,7 @@ output/
 # dashboard (Vite/React)
 dashboard/node_modules/
 dashboard/dist/
+
+# vaga_rotativa (subprojeto)
+vaga_rotativa/capturas/*.jpg
+!vaga_rotativa/capturas/.gitkeep

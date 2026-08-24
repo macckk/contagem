@@ -7,6 +7,7 @@ import LineChartCrossings from "./components/LineChartCrossings.jsx";
 import BarChartTipos from "./components/BarChartTipos.jsx";
 import BarChartPorDia from "./components/BarChartPorDia.jsx";
 import TableView from "./components/TableView.jsx";
+import VagaRotativa from "./components/VagaRotativa.jsx";
 import {
   rangeStartFor,
   computeStats,
@@ -50,6 +51,7 @@ async function fetchEventsSince(since) {
 }
 
 export default function App() {
+  const [view, setView] = useState("contagem");
   const [range, setRange] = useState("hoje");
   const [confMin, setConfMin] = useState(0);
   const [events, setEvents] = useState([]);
@@ -113,14 +115,30 @@ export default function App() {
 
       <header className="dash-header">
         <div>
-          <h1>Contagem de Pessoas e Veículos</h1>
-          <p>
-            {lastUpdated
-              ? `Atualizado às ${lastUpdated.toLocaleTimeString("pt-BR")}`
-              : "Carregando…"}
-          </p>
+          <h1>{view === "contagem" ? "Contagem de Pessoas e Veículos" : "Vaga Rotativa"}</h1>
+          {view === "contagem" && (
+            <p>
+              {lastUpdated
+                ? `Atualizado às ${lastUpdated.toLocaleTimeString("pt-BR")}`
+                : "Carregando…"}
+            </p>
+          )}
         </div>
         <div className="header-actions">
+          <div className="pill-group">
+            <button
+              className={`pill ${view === "contagem" ? "active" : ""}`}
+              onClick={() => setView("contagem")}
+            >
+              Contagem
+            </button>
+            <button
+              className={`pill ${view === "vaga" ? "active" : ""}`}
+              onClick={() => setView("vaga")}
+            >
+              Vaga Rotativa
+            </button>
+          </div>
           <button
             className="theme-toggle-btn"
             onClick={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}
@@ -129,65 +147,73 @@ export default function App() {
           >
             {theme === "dark" ? "☀️" : "🌙"}
           </button>
-          <button
-            className={`refresh-btn ${loading ? "loading" : ""}`}
-            onClick={fetchEvents}
-            disabled={loading}
-          >
-            <span className="refresh-icon">⟳</span>
-            {loading ? "Atualizando…" : "Atualizar"}
-          </button>
+          {view === "contagem" && (
+            <button
+              className={`refresh-btn ${loading ? "loading" : ""}`}
+              onClick={fetchEvents}
+              disabled={loading}
+            >
+              <span className="refresh-icon">⟳</span>
+              {loading ? "Atualizando…" : "Atualizar"}
+            </button>
+          )}
         </div>
       </header>
 
-      {error && <div className="error-banner">Erro ao carregar dados: {error}</div>}
-
-      <FiltersBar
-        range={range}
-        onRangeChange={setRange}
-        confMin={confMin}
-        onConfChange={setConfMin}
-      />
-
-      <div className="kpi-grid">
-        <StatTile
-          label="Pessoas"
-          value={stats.totalPessoas}
-          dotColor="var(--series-pessoas)"
-          sub="cruzamentos no período"
-        />
-        <StatTile
-          label="Veículos"
-          value={stats.totalVeiculos}
-          dotColor="var(--series-veiculos)"
-          sub="cruzamentos no período"
-        />
-        <ConfidenceCard confMedia={stats.confMedia} histogram={histogram} />
-        <StatTile
-          label="Pico de horário"
-          value={stats.picoContagem}
-          sub={`às ${String(stats.picoHora).padStart(2, "0")}h`}
-        />
-      </div>
-
-      {!loading && filtered.length === 0 && byDay.length === 0 ? (
-        <div className="glass-card empty-state">
-          Nenhum evento encontrado para os filtros atuais.
-        </div>
+      {view === "vaga" ? (
+        <VagaRotativa />
       ) : (
         <>
-          {filtered.length > 0 && (
-            <div className="charts-grid">
-              <LineChartCrossings data={byHour} />
-              <BarChartTipos data={byTipo} />
+          {error && <div className="error-banner">Erro ao carregar dados: {error}</div>}
+
+          <FiltersBar
+            range={range}
+            onRangeChange={setRange}
+            confMin={confMin}
+            onConfChange={setConfMin}
+          />
+
+          <div className="kpi-grid">
+            <StatTile
+              label="Pessoas"
+              value={stats.totalPessoas}
+              dotColor="var(--series-pessoas)"
+              sub="cruzamentos no período"
+            />
+            <StatTile
+              label="Veículos"
+              value={stats.totalVeiculos}
+              dotColor="var(--series-veiculos)"
+              sub="cruzamentos no período"
+            />
+            <ConfidenceCard confMedia={stats.confMedia} histogram={histogram} />
+            <StatTile
+              label="Pico de horário"
+              value={stats.picoContagem}
+              sub={`às ${String(stats.picoHora).padStart(2, "0")}h`}
+            />
+          </div>
+
+          {!loading && filtered.length === 0 && byDay.length === 0 ? (
+            <div className="glass-card empty-state">
+              Nenhum evento encontrado para os filtros atuais.
             </div>
+          ) : (
+            <>
+              {filtered.length > 0 && (
+                <div className="charts-grid">
+                  <LineChartCrossings data={byHour} />
+                  <BarChartTipos data={byTipo} />
+                </div>
+              )}
+              {byDay.length > 0 && (
+                <div className="charts-grid charts-grid-single">
+                  <BarChartPorDia data={byDay} />
+                </div>
+              )}
+              {filtered.length > 0 && <TableView events={filtered} />}
+            </>
           )}
-          {byDay.length > 0 && (
-            <div className="charts-grid charts-grid-single">
-              <BarChartPorDia data={byDay} />
-            </div>
-          )}
-          {filtered.length > 0 && <TableView events={filtered} />}
         </>
       )}
 

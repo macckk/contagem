@@ -1,4 +1,19 @@
-# Contagem de Pessoas e Veículos
+# Contagem de Veículos
+
+Repositório com dois subprojetos de monitoramento por câmera IP/DVR + visão
+computacional (YOLOv8 + Supabase):
+
+- **[Contagem de Pessoas e Veículos](#contagem-de-pessoas-e-veículos)** (raiz
+  do repo) — conta pessoas na calçada e veículos na via.
+- **[Vaga Rotativa](#vaga-rotativa)** (`vaga_rotativa/`) — monitora a
+  ocupação de uma vaga de estacionamento rotativo (entrada/saída, duração,
+  excesso do tempo permitido).
+
+Os dois compartilham utilitários genéricos (`src/rtsp_client.py`,
+`src/device_info.py`, `src/fps_meter.py`, `src/zone_counter.py`), mas têm
+`.env` e lógica de negócio próprios — são independentes um do outro.
+
+## Contagem de Pessoas e Veículos
 
 Sistema de teste para contar pessoas que passam pela calçada (e,
 opcionalmente, veículos que passam pela via) em frente a uma câmera IP,
@@ -416,3 +431,113 @@ usando a chave `anon public` do Supabase (não a `service_role`).
   1000 linhas por padrão, mesmo pedindo um `.limit()` maior — o dashboard
   pagina automaticamente com `.range()` até trazer todos os eventos do
   período, então não há corte de dados em testes de campo longos.
+- **Vaga Rotativa**: o mesmo app tem um toggle "Contagem" / "Vaga Rotativa"
+  no cabeçalho — a segunda aba (`dashboard/src/components/VagaRotativa.jsx`)
+  mostra o status ao vivo da vaga (livre/ocupada), veículos nas últimas 24h,
+  tempo médio de permanência e o histórico de sessões, lendo a tabela
+  `vaga_eventos` (ver seção **Vaga Rotativa** abaixo).
+
+---
+
+# Vaga Rotativa
+
+Subprojeto em `vaga_rotativa/` que monitora a ocupação de uma vaga de
+estacionamento rotativo (15 minutos) numa via, usando outra fonte de vídeo —
+um DVR Intelbras (protocolo Dahua,
+`rtsp://usuario:senha@IP:554/cam/realmonitor?channel=N&subtype=0`) — e o
+mesmo projeto Supabase do app de contagem, numa tabela nova (`vaga_eventos`).
+
+Registra **entrada** e **saída** do veículo (permitindo calcular quanto
+tempo ficou), conta quantos veículos distintos usam a vaga em 24h, e tira
+uma foto local se alguém exceder o tempo permitido.
+
+## Por que não usa tracking por `track_id`
+
+A contagem de pessoas/veículos (seção acima) precisa de `track_id`
+(ByteTrack) porque vários objetos passam ao mesmo tempo. Numa vaga só cabe
+um veículo por vez — então `vaga_rotativa/zone_state.py::VagaState` usa uma
+máquina de estados simples por **presença/ausência ao longo do tempo**
+(sem tracking), o que é mais robusto: imune a troca de identidade do
+tracker, e mais simples de raciocinar.
+
+## Zonas (3 polígonos de 4 pontos)
+
+Inspirado nas fotos de câmera com faixas coloridas sobrepostas na via:
+
+- **Exclusão** (vermelho, opcional, pode ter várias): descarta detecções
+  ali, igual `EXCLUDE_ZONES` do projeto de contagem.
+- **Monitoramento** (verde, obrigatória): área ampla que inclui a mínima —
+  usada para *sustentar* uma sessão já confirmada (tolera o veículo
+  balançar/deslocar um pouco sem encerrar a sessão à toa).
+- **Mínima** (azul, obrigatória, subconjunto da monitoramento): núcleo —
+  só conta como "realmente estacionado na vaga" se o ponto de contato do
+  veículo (base da caixa, igual `ZoneCooldownCounter.bbox_bottom_center`)
+  tocar aqui.
+
+Calibre com:
+
+```bash
+python vaga_rotativa/scripts/calibrar_zonas.py --alvo exclusao       # opcional
+python vaga_rotativa/scripts/calibrar_zonas.py --alvo monitoramento
+python vaga_rotativa/scripts/calibrar_zonas.py --alvo minima
+```
+
+Clique 4 pontos por vez; o script imprime a variável para colar no
+`vaga_rotativa/.env` (`ZONA_EXCLUSAO`/`ZONA_MONITORAMENTO`/`ZONA_MINIMA`,
+formato `x1,y1,x2,y2,x3,y3,x4,y4`, múltiplas exclusões separadas por `;`).
+
+## Máquina de estados (`livre → pendente → ocupada → livre`)
+
+```
+livre:     detectou na zona mínima -> pendente (marca o instante)
+
+pendente:  continua na mínima por TEMPO_CONFIRMAR_ESTACIONADO_SEGUNDOS (20s)
+           -> confirma "ocupada" (o horário de entrada é o instante em que
+              a mínima foi vista pela 1ª vez, não o da confirmação)
+           saiu da mínima sem confirmar, e ficou fora por mais de
+           TEMPO_TOLERANCIA_SAIDA_SEGUNDOS -> desiste, volta a "livre"
+           (nunca chega a ser contado - evita contar trânsito lento/farol)
+
+ocupada:   sem nenhuma deteccão (nem na zona de monitoramento) por
+           TEMPO_TOLERANCIA_SAIDA_SEGUNDOS -> registra saída/duração, volta
+           a "livre"
+           passou de LIMITE_MINUTOS_PERMITIDO (15min) sem ainda ter
+           registrado o excesso -> tira uma foto local e marca o evento
+```
+
+Os dois tempos de tolerância existem para não confundir trânsito
+passageiro ou uma oclusão momentânea (ex: outro veículo/ônibus cruzando na
+frente) com entrada/saída real.
+
+## Rodar
+
+```bash
+copy vaga_rotativa\.env.example vaga_rotativa\.env
+# preencha RTSP_URL, SUPABASE_URL/KEY (service_role) e as 3 zonas calibradas
+
+python vaga_rotativa/scripts/monitorar_vaga.py
+python vaga_rotativa/scripts/monitorar_vaga.py --debug     # detalhe de cada deteccao/zona por frame
+python vaga_rotativa/scripts/monitorar_vaga.py --headless  # sem janela de vídeo
+```
+
+Assim como `scripts/03_pipeline.py`, reconecta automaticamente se a conexão
+com o DVR cair (retry a cada 5s), em vez de encerrar.
+
+## Banco de dados
+
+Rode `vaga_rotativa/sql/schema.sql` no SQL editor do Supabase (mesmo
+projeto do app de contagem) para criar a tabela `vaga_eventos`, e depois
+`vaga_rotativa/sql/001_rls_leitura_publica.sql` para liberar leitura
+pública (`SELECT`) para o dashboard, igual ao padrão já usado em
+`sql/migrations/004_rls_leitura_publica.sql`.
+
+Colunas: `vaga_id`, `entrada`/`saida` (`timestamptz`), `duracao_segundos`,
+`excedeu_limite` (bool), `imagem_path` (caminho local da foto, se houve
+excesso).
+
+## Fotos de excesso de tempo
+
+Salvas localmente em `vaga_rotativa/capturas/` (gitignored) — por decisão
+de projeto, não sobem para o Supabase Storage nem aparecem no dashboard por
+enquanto (o dashboard mostra só o registro/flag `excedeu_limite`). Servem
+para conferência manual no PC que roda o monitoramento.
