@@ -163,6 +163,16 @@ class RTSPClient:
             raise RuntimeError(f"DESCRIBE falhou: {headers!r}")
         sdp = sdp_body.decode(errors="replace")
 
+        codec_nome = self._parse_video_codec(sdp)
+        if codec_nome and codec_nome.upper() != "H264":
+            print(
+                f"Aviso: o SDP anuncia o codec de video como '{codec_nome}', mas este "
+                "cliente so decodifica H264 - nenhum frame vai chegar. Troque o canal/"
+                "stream do DVR para H.264 (em DVRs Dahua/Intelbras, o substream costuma "
+                "vir em H.264 mesmo quando o principal esta em H.265/HEVC - tente "
+                "&subtype=1 na URL)."
+            )
+
         control = self._parse_video_control(sdp)
         track_url = control if control.startswith("rtsp://") else f"{self._url_no_auth}/{control}"
         self._prime_decoder_with_sprop(sdp)
@@ -194,6 +204,27 @@ class RTSPClient:
         self._running = True
         self._thread = threading.Thread(target=self._read_loop, daemon=True)
         self._thread.start()
+
+    @staticmethod
+    def _parse_video_codec(sdp):
+        """Le o nome do codec (ex: 'H264', 'H265') do rtpmap do payload type
+        de video anunciado no SDP - so para diagnostico, ja que este cliente
+        decodifica apenas H264 (ver aviso em _connect)."""
+        in_video = False
+        payload_type = None
+        for line in sdp.splitlines():
+            if line.startswith("m=video"):
+                in_video = True
+                partes = line.split()
+                if len(partes) >= 4:
+                    payload_type = partes[3]
+                continue
+            if line.startswith("m=") and in_video:
+                break
+            if in_video and payload_type and line.startswith(f"a=rtpmap:{payload_type} "):
+                resto = line.split(" ", 1)[1]
+                return resto.split("/")[0]
+        return None
 
     @staticmethod
     def _parse_video_control(sdp):
