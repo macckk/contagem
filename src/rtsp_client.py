@@ -12,6 +12,10 @@ dois problemas: usa a mesma conexao TCP ja estabelecida para tudo.
 
 Expoe uma interface parecida com cv2.VideoCapture (isOpened/read/release)
 para os scripts nao precisarem mudar muito.
+
+Tambem reaproveitado pelo subprojeto vaga_rotativa/ para falar com DVRs
+Dahua/Intelbras, que exigem query string na URL para selecionar canal/
+subtipo (ex: ?channel=6&subtype=0) - preservada ao montar a URL interna.
 """
 import base64
 import hashlib
@@ -32,6 +36,11 @@ class RTSPClient:
         self._user = parts.username or ""
         self._password = parts.password or ""
         self._path = parts.path or "/"
+        if parts.query:
+            # DVRs Dahua/Intelbras usam query string para selecionar canal/
+            # subtipo (ex: ?channel=6&subtype=0) - sem isso o DESCRIBE cai
+            # num recurso ambiguo e o DVR responde 404 Not Found.
+            self._path += f"?{parts.query}"
         self._url_no_auth = f"rtsp://{self._host}:{self._port}{self._path}"
         self._timeout = timeout
 
