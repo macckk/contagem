@@ -46,6 +46,17 @@ def open_capture(retry_wait=5.0):
         time.sleep(retry_wait)
 
 
+def draw_zona_preenchida(frame, poligono, color, alpha=0.25):
+    """Desenha um poligono preenchido com transparencia (mesmo padrao de
+    draw_zone em scripts/02_tracking.py e 03_pipeline.py) - mais legivel na
+    tela que so o contorno."""
+    pts = np.array(poligono, dtype=np.int32)
+    overlay = frame.copy()
+    cv2.fillPoly(overlay, [pts], color)
+    cv2.addWeighted(overlay, alpha, frame, 1 - alpha, 0, frame)
+    cv2.polylines(frame, [pts], isClosed=True, color=color, thickness=1)
+
+
 def bbox_bottom_center(xyxy):
     x1, y1, x2, y2 = xyxy
     return ((x1 + x2) / 2, y2)
@@ -167,16 +178,10 @@ def main():
 
             if not args.headless:
                 annotated = result.plot()
-                cv2.polylines(
-                    annotated, [np.array(zona_monitoramento, dtype=np.int32)], isClosed=True, color=(0, 255, 0), thickness=2
-                )
-                cv2.polylines(
-                    annotated, [np.array(zona_minima, dtype=np.int32)], isClosed=True, color=(255, 0, 0), thickness=2
-                )
+                draw_zona_preenchida(annotated, zona_monitoramento, (0, 255, 0))
+                draw_zona_preenchida(annotated, zona_minima, (255, 0, 0))
                 for poligono in zona_exclusao:
-                    cv2.polylines(
-                        annotated, [np.array(poligono, dtype=np.int32)], isClosed=True, color=(0, 0, 255), thickness=2
-                    )
+                    draw_zona_preenchida(annotated, poligono, (0, 0, 255))
                 cv2.putText(
                     annotated, f"Estado: {vaga.estado}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2
                 )
