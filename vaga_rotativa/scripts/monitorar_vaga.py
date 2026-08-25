@@ -57,9 +57,13 @@ def draw_zona_preenchida(frame, poligono, color, alpha=0.25):
     cv2.polylines(frame, [pts], isClosed=True, color=color, thickness=1)
 
 
-def bbox_bottom_center(xyxy):
+def bbox_ponto_referencia(xyxy):
+    """Ponto de contato usado para testar as zonas: base da caixa, deslocado
+    25% da largura para a esquerda do centro (ajustado empiricamente - o
+    centro exato as vezes caia fora da vaga dependendo do angulo da camera)."""
     x1, y1, x2, y2 = xyxy
-    return ((x1 + x2) / 2, y2)
+    largura = x2 - x1
+    return (x1 + 0.25 * largura, y2)
 
 
 def main():
@@ -74,12 +78,12 @@ def main():
             "vaga_rotativa/.env e preencha."
         )
 
-    zona_minima = config.get_zona_minima()
     zona_monitoramento = config.get_zona_monitoramento()
-    if zona_minima is None or zona_monitoramento is None:
+    if zona_monitoramento is None:
         raise SystemExit(
-            "Zonas nao calibradas. Rode 'python vaga_rotativa/scripts/calibrar_zonas.py --alvo minima' "
-            "e '--alvo monitoramento', preenchendo ZONA_MINIMA/ZONA_MONITORAMENTO no vaga_rotativa/.env."
+            "Zona de monitoramento nao calibrada. Rode "
+            "'python vaga_rotativa/scripts/calibrar_zonas.py --alvo monitoramento', "
+            "preenchendo ZONA_MONITORAMENTO no vaga_rotativa/.env."
         )
     zona_exclusao = config.get_zona_exclusao()
     if zona_exclusao:
@@ -124,30 +128,24 @@ def main():
             )[0]
             fps = fps_meter.tick()
 
-            in_minima = False
             in_monitoramento = False
             boxes = result.boxes
             if boxes is not None:
                 for xyxy, conf, cls_id in zip(boxes.xyxy.tolist(), boxes.conf.tolist(), boxes.cls.tolist()):
-                    ponto = bbox_bottom_center(xyxy)
+                    ponto = bbox_ponto_referencia(xyxy)
                     if zona_exclusao and point_in_any_polygon(zona_exclusao, ponto):
                         if args.debug:
                             print("[debug]   -> ignorado (dentro de ZONA_EXCLUSAO)")
                         continue
 
-                    pertence_minima = point_in_any_polygon([zona_minima], ponto)
-                    pertence_monitoramento = pertence_minima or point_in_any_polygon([zona_monitoramento], ponto)
-                    in_minima = in_minima or pertence_minima
+                    pertence_monitoramento = point_in_any_polygon([zona_monitoramento], ponto)
                     in_monitoramento = in_monitoramento or pertence_monitoramento
 
                     if args.debug:
                         nome = config.VEHICLE_CLASS_IDS.get(int(cls_id), f"classe_{int(cls_id)}")
-                        print(
-                            f"[debug] {nome} conf={conf:.2f} minima={pertence_minima} "
-                            f"monitoramento={pertence_monitoramento}"
-                        )
+                        print(f"[debug] {nome} conf={conf:.2f} monitoramento={pertence_monitoramento}")
 
-            evento = vaga.update(in_minima, in_monitoramento)
+            evento = vaga.update(in_monitoramento)
             if evento is not None:
                 if evento["tipo"] == "entrada":
                     evento_id_atual = registrar_entrada(evento["entrada_ts"])
@@ -179,7 +177,6 @@ def main():
             if not args.headless:
                 annotated = result.plot()
                 draw_zona_preenchida(annotated, zona_monitoramento, (0, 255, 0))
-                draw_zona_preenchida(annotated, zona_minima, (255, 0, 0))
                 for poligono in zona_exclusao:
                     draw_zona_preenchida(annotated, poligono, (0, 0, 255))
                 texto_estado = f"Estado: {vaga.estado}"

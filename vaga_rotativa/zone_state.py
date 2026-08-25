@@ -20,15 +20,13 @@ class VagaState:
 
         self.estado = self.LIVRE
         self.pendente_desde = None
-        self.ultimo_visto_minima = None
-        self.ultimo_visto_monitoramento = None
+        self.ultimo_visto = None
         self.entrada_ts = None
         self.excedeu_limite_registrado = False
 
-    def update(self, in_minima: bool, in_monitoramento: bool, now: float = None):
+    def update(self, in_zona: bool, now: float = None):
         """Processa um frame (ja resolvido se algum veiculo detectado cai na
-        zona minima e/ou na zona de monitoramento). Retorna um dict de evento
-        ou None:
+        zona de monitoramento). Retorna um dict de evento ou None:
 
         {"tipo": "entrada", "entrada_ts": float}
         {"tipo": "saida", "entrada_ts": float, "saida_ts": float, "duracao_segundos": float}
@@ -36,35 +34,33 @@ class VagaState:
         """
         now = time.time() if now is None else now
 
-        if in_minima:
-            self.ultimo_visto_minima = now
-        if in_monitoramento or in_minima:
-            self.ultimo_visto_monitoramento = now
+        if in_zona:
+            self.ultimo_visto = now
 
         if self.estado == self.LIVRE:
-            if in_minima:
+            if in_zona:
                 self.estado = self.PENDENTE
                 self.pendente_desde = now
             return None
 
         if self.estado == self.PENDENTE:
-            if in_minima:
+            if in_zona:
                 if now - self.pendente_desde >= self.tempo_confirmar:
                     self.estado = self.OCUPADA
                     self.entrada_ts = self.pendente_desde
                     self.excedeu_limite_registrado = False
                     return {"tipo": "entrada", "entrada_ts": self.entrada_ts}
             else:
-                # Nao esta na zona minima neste frame - tolera flicker curto
-                # antes de desistir (o carro pode nao ter realmente parado).
-                if self.ultimo_visto_minima is None or now - self.ultimo_visto_minima > self.tempo_tolerancia_saida:
+                # Nao esta na zona neste frame - tolera flicker curto antes
+                # de desistir (o carro pode nao ter realmente parado).
+                if self.ultimo_visto is None or now - self.ultimo_visto > self.tempo_tolerancia_saida:
                     self.estado = self.LIVRE
                     self.pendente_desde = None
             return None
 
         if self.estado == self.OCUPADA:
-            if now - self.ultimo_visto_monitoramento > self.tempo_tolerancia_saida:
-                saida_ts = self.ultimo_visto_monitoramento
+            if now - self.ultimo_visto > self.tempo_tolerancia_saida:
+                saida_ts = self.ultimo_visto
                 entrada_ts = self.entrada_ts
                 self.estado = self.LIVRE
                 self.entrada_ts = None

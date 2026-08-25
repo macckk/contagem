@@ -29,8 +29,8 @@ IMGSZ = int(os.getenv("IMGSZ", "1280"))
 # cai naturalmente em "car" (mais comum) ou "truck" dependendo do porte.
 VEHICLE_CLASS_IDS = {2: "car", 3: "motorcycle", 5: "bus", 7: "truck"}
 
-# Tempo continuo dentro da zona minima (azul) para confirmar que o veiculo
-# realmente estacionou (evita contar transito lento/parada de farol).
+# Tempo continuo dentro da zona de monitoramento para confirmar que o
+# veiculo realmente estacionou (evita contar transito lento/parada de farol).
 TEMPO_CONFIRMAR_ESTACIONADO_SEGUNDOS = float(os.getenv("TEMPO_CONFIRMAR_ESTACIONADO_SEGUNDOS", "20"))
 
 # Tempo sem nenhuma deteccao (nem na zona de monitoramento, verde) para
@@ -72,12 +72,6 @@ def get_zona_exclusao():
 
 
 def get_zona_monitoramento():
-    """Poligono unico (verde, inclui a zona minima) - None se nao calibrada."""
+    """Poligono unico (verde) - area da vaga em si. None se nao calibrada."""
     raw = os.getenv("ZONA_MONITORAMENTO", "").strip()
-    return _parse_polygon(raw) if raw else None
-
-
-def get_zona_minima():
-    """Poligono unico (azul, nucleo - subconjunto da zona de monitoramento) - None se nao calibrada."""
-    raw = os.getenv("ZONA_MINIMA", "").strip()
     return _parse_polygon(raw) if raw else None

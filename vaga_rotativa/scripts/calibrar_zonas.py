@@ -6,15 +6,13 @@ variavel para colar no vaga_rotativa/.env.
 
 Uso:
     python vaga_rotativa/scripts/calibrar_zonas.py --alvo exclusao       # vermelho - opcional, pode repetir
-    python vaga_rotativa/scripts/calibrar_zonas.py --alvo monitoramento  # verde - area ampla, inclui a minima
-    python vaga_rotativa/scripts/calibrar_zonas.py --alvo minima         # azul - nucleo, subconjunto da monitoramento
+    python vaga_rotativa/scripts/calibrar_zonas.py --alvo monitoramento  # verde - area da propria vaga
 
-A zona de monitoramento (verde) deve cobrir toda a area onde o veiculo pode
-estar parcialmente visivel enquanto ocupa a vaga (usada para nao encerrar a
-sessao por pequenas oscilacoes de posicao). A zona minima (azul) deve ficar
-dentro da de monitoramento - so contar como "realmente na vaga" exige tocar
-aqui. A de exclusao (vermelho) e opcional; pode ter mais de uma - rode de novo
-e junte os blocos com ";" no .env.
+A zona de monitoramento (verde) deve cobrir a area da vaga em si - e usada
+tanto para confirmar que o veiculo estacionou quanto para sustentar a sessao
+(tolera pequenas oscilacoes de posicao sem encerrar a toa). A de exclusao
+(vermelho) e opcional; pode ter mais de uma - rode de novo e junte os blocos
+com ";" no .env.
 """
 import argparse
 import sys
@@ -40,7 +38,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--alvo",
-        choices=["exclusao", "monitoramento", "minima"],
+        choices=["exclusao", "monitoramento"],
         required=True,
         help="Qual zona calibrar (ver docstring do arquivo).",
     )
@@ -48,7 +46,6 @@ def main():
     env_var = {
         "exclusao": "ZONA_EXCLUSAO",
         "monitoramento": "ZONA_MONITORAMENTO",
-        "minima": "ZONA_MINIMA",
     }[args.alvo]
 
     if not config.RTSP_URL:

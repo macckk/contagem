@@ -460,47 +460,52 @@ máquina de estados simples por **presença/ausência ao longo do tempo**
 (sem tracking), o que é mais robusto: imune a troca de identidade do
 tracker, e mais simples de raciocinar.
 
-## Zonas (3 polígonos de 4 pontos)
+## Zonas (2 polígonos de 4 pontos)
 
-Inspirado nas fotos de câmera com faixas coloridas sobrepostas na via:
+Inspirado nas fotos de câmera com faixas coloridas sobrepostas na via
+(a versão inicial tinha uma 3ª zona "mínima" separada, removida depois dos
+testes de campo por ser desnecessária):
 
 - **Exclusão** (vermelho, opcional, pode ter várias): descarta detecções
   ali, igual `EXCLUDE_ZONES` do projeto de contagem.
-- **Monitoramento** (verde, obrigatória): área ampla que inclui a mínima —
-  usada para *sustentar* uma sessão já confirmada (tolera o veículo
-  balançar/deslocar um pouco sem encerrar a sessão à toa).
-- **Mínima** (azul, obrigatória, subconjunto da monitoramento): núcleo —
-  só conta como "realmente estacionado na vaga" se o ponto de contato do
-  veículo (base da caixa, igual `ZoneCooldownCounter.bbox_bottom_center`)
-  tocar aqui.
+- **Monitoramento** (verde, obrigatória): a área da própria vaga — usada
+  tanto para confirmar que o veículo estacionou quanto para sustentar a
+  sessão já confirmada (tolera o veículo balançar/deslocar um pouco sem
+  encerrar a sessão à toa).
 
 Calibre com:
 
 ```bash
 python vaga_rotativa/scripts/calibrar_zonas.py --alvo exclusao       # opcional
 python vaga_rotativa/scripts/calibrar_zonas.py --alvo monitoramento
-python vaga_rotativa/scripts/calibrar_zonas.py --alvo minima
 ```
 
 Clique 4 pontos por vez; o script imprime a variável para colar no
-`vaga_rotativa/.env` (`ZONA_EXCLUSAO`/`ZONA_MONITORAMENTO`/`ZONA_MINIMA`,
-formato `x1,y1,x2,y2,x3,y3,x4,y4`, múltiplas exclusões separadas por `;`).
+`vaga_rotativa/.env` (`ZONA_EXCLUSAO`/`ZONA_MONITORAMENTO`, formato
+`x1,y1,x2,y2,x3,y3,x4,y4`, múltiplas exclusões separadas por `;`).
+
+### Ponto de referência do veículo
+
+A checagem de zona não usa o centro da caixa detectada, e sim um ponto na
+base (mesmo eixo Y de `y2`), deslocado 25% da largura da caixa para a
+esquerda do centro (`bbox_ponto_referencia` em `monitorar_vaga.py`) — foi o
+que melhor bateu com a área real da vaga durante os testes, dado o ângulo
+da câmera.
 
 ## Máquina de estados (`livre → pendente → ocupada → livre`)
 
 ```
-livre:     detectou na zona mínima -> pendente (marca o instante)
+livre:     detectou na zona de monitoramento -> pendente (marca o instante)
 
-pendente:  continua na mínima por TEMPO_CONFIRMAR_ESTACIONADO_SEGUNDOS (20s)
+pendente:  continua na zona por TEMPO_CONFIRMAR_ESTACIONADO_SEGUNDOS (20s)
            -> confirma "ocupada" (o horário de entrada é o instante em que
-              a mínima foi vista pela 1ª vez, não o da confirmação)
-           saiu da mínima sem confirmar, e ficou fora por mais de
+              a zona foi vista pela 1ª vez, não o da confirmação)
+           saiu da zona sem confirmar, e ficou fora por mais de
            TEMPO_TOLERANCIA_SAIDA_SEGUNDOS -> desiste, volta a "livre"
            (nunca chega a ser contado - evita contar trânsito lento/farol)
 
-ocupada:   sem nenhuma deteccão (nem na zona de monitoramento) por
-           TEMPO_TOLERANCIA_SAIDA_SEGUNDOS -> registra saída/duração, volta
-           a "livre"
+ocupada:   sem nenhuma deteccão na zona por TEMPO_TOLERANCIA_SAIDA_SEGUNDOS
+           -> registra saída/duração, volta a "livre"
            passou de LIMITE_MINUTOS_PERMITIDO (15min) sem ainda ter
            registrado o excesso -> tira uma foto local e marca o evento
 ```
@@ -513,7 +518,7 @@ frente) com entrada/saída real.
 
 ```bash
 copy vaga_rotativa\.env.example vaga_rotativa\.env
-# preencha RTSP_URL, SUPABASE_URL/KEY (service_role) e as 3 zonas calibradas
+# preencha RTSP_URL, SUPABASE_URL/KEY (service_role) e as zonas calibradas
 
 python vaga_rotativa/scripts/monitorar_vaga.py
 python vaga_rotativa/scripts/monitorar_vaga.py --debug     # detalhe de cada deteccao/zona por frame
