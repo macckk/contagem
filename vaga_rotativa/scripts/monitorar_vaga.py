@@ -182,11 +182,16 @@ def main():
                 draw_zona_preenchida(annotated, zona_minima, (255, 0, 0))
                 for poligono in zona_exclusao:
                     draw_zona_preenchida(annotated, poligono, (0, 0, 255))
+                texto_estado = f"Estado: {vaga.estado}"
+                (texto_w, _), _ = cv2.getTextSize(texto_estado, cv2.FONT_HERSHEY_SIMPLEX, 1, 2)
                 cv2.putText(
-                    annotated, f"Estado: {vaga.estado}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2
-                )
-                cv2.putText(
-                    annotated, f"FPS: {fps:.1f}", (10, 65), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2
+                    annotated,
+                    texto_estado,
+                    (annotated.shape[1] - texto_w - 10, annotated.shape[0] - 15),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    1,
+                    (255, 255, 255),
+                    2,
                 )
                 cv2.imshow("Vaga Rotativa", annotated)
                 if cv2.waitKey(1) & 0xFF == ord("x"):
