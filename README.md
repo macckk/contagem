@@ -523,10 +523,24 @@ copy vaga_rotativa\.env.example vaga_rotativa\.env
 python vaga_rotativa/scripts/monitorar_vaga.py
 python vaga_rotativa/scripts/monitorar_vaga.py --debug     # detalhe de cada deteccao/zona por frame
 python vaga_rotativa/scripts/monitorar_vaga.py --headless  # sem janela de vídeo
+python vaga_rotativa/scripts/monitorar_vaga.py --gravar    # grava um video por sessao de ocupacao
 ```
 
 Assim como `scripts/03_pipeline.py`, reconecta automaticamente se a conexão
 com o DVR cair (retry a cada 5s), em vez de encerrar.
+
+### Gravação de vídeo por sessão (`--gravar`)
+
+Útil para gerar exemplos de vídeo para a documentação. Assim que o estado
+sai de `livre` (o veículo entra na zona de monitoramento), começa a gravar
+em `vaga_rotativa/gravacoes/vaga_<VAGA_ID>_AAAAMMDD_HHMMSS.mp4` (com as
+zonas desenhadas, igual à janela de vídeo); o vídeo é fechado assim que o
+estado volta a `livre` — seja por uma saída real (`ocupada → livre`) ou por
+uma desistência (`pendente → livre`, quando o veículo só passou perto sem
+realmente estacionar). Funciona junto com `--headless` (grava sem abrir
+janela). `--fps-gravacao` (padrão `12.0`) ajusta o FPS do arquivo — regule
+perto do FPS real mostrado no console, senão o vídeo sai acelerado ou em
+câmera lenta (mesmo cuidado de `--gravar` em `scripts/02_tracking.py`).
 
 ## Banco de dados
 

@@ -11,6 +11,7 @@ Uso:
     python vaga_rotativa/scripts/monitorar_vaga.py
     python vaga_rotativa/scripts/monitorar_vaga.py --debug     # detalhe de cada deteccao/zona por frame
     python vaga_rotativa/scripts/monitorar_vaga.py --headless  # sem janela de video
+    python vaga_rotativa/scripts/monitorar_vaga.py --gravar    # grava um video por sessao de ocupacao
 
 Se a conexao com o DVR cair, o script fica tentando reconectar a cada 5s (mesmo
 comportamento de scripts/03_pipeline.py) em vez de encerrar.
@@ -70,6 +71,19 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--debug", action="store_true", help="Mostra no console detalhes de cada deteccao/zona por frame")
     parser.add_argument("--headless", action="store_true", help="Nao abrir janela de video")
+    parser.add_argument(
+        "--gravar",
+        action="store_true",
+        help="Grava um video por sessao de ocupacao (da entrada na zona de monitoramento ate "
+        "a saida) em vaga_rotativa/gravacoes/*.mp4 - util para exemplos na documentacao.",
+    )
+    parser.add_argument(
+        "--fps-gravacao",
+        type=float,
+        default=12.0,
+        help="FPS do arquivo gravado (opcional, so com --gravar). Padrao: 12.0 - ajuste para "
+        "perto do FPS real exibido no console, senao o video grava rapido/lento demais.",
+    )
     args = parser.parse_args()
 
     if not config.RTSP_URL:
@@ -90,6 +104,9 @@ def main():
         print(f"{len(zona_exclusao)} area(s) de exclusao carregada(s) de ZONA_EXCLUSAO.")
 
     config.CAPTURAS_DIR.mkdir(parents=True, exist_ok=True)
+    gravacoes_dir = Path(__file__).resolve().parent.parent / "gravacoes"
+    if args.gravar:
+        gravacoes_dir.mkdir(parents=True, exist_ok=True)
 
     print_device_info(config.DEVICE)
     use_half = config.HALF_PRECISION and should_use_half(config.DEVICE)
@@ -106,6 +123,8 @@ def main():
         limite_minutos=config.LIMITE_MINUTOS_PERMITIDO,
     )
     evento_id_atual = None
+    video_writer = None
+    video_path = None
 
     try:
         while True:
@@ -145,6 +164,7 @@ def main():
                         nome = config.VEHICLE_CLASS_IDS.get(int(cls_id), f"classe_{int(cls_id)}")
                         print(f"[debug] {nome} conf={conf:.2f} monitoramento={pertence_monitoramento}")
 
+            estado_antes = vaga.estado
             evento = vaga.update(in_monitoramento)
             if evento is not None:
                 if evento["tipo"] == "entrada":
@@ -174,7 +194,7 @@ def main():
                 print(f"FPS: {fps:.1f}  estado={vaga.estado}")
                 last_fps_print = now
 
-            if not args.headless:
+            if not args.headless or args.gravar:
                 annotated = result.plot()
                 draw_zona_preenchida(annotated, zona_monitoramento, (0, 255, 0))
                 for poligono in zona_exclusao:
@@ -190,14 +210,37 @@ def main():
                     (255, 255, 255),
                     2,
                 )
-                cv2.imshow("Vaga Rotativa", annotated)
-                if cv2.waitKey(1) & 0xFF == ord("x"):
-                    break
+
+                if args.gravar:
+                    if estado_antes == VagaState.LIVRE and vaga.estado == VagaState.PENDENTE:
+                        nome_arquivo = f"vaga_{config.VAGA_ID}_{time.strftime('%Y%m%d_%H%M%S')}.mp4"
+                        video_path = gravacoes_dir / nome_arquivo
+                        altura, largura = annotated.shape[:2]
+                        fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+                        video_writer = cv2.VideoWriter(str(video_path), fourcc, args.fps_gravacao, (largura, altura))
+                        print(f"[{config.VAGA_ID}] Gravando sessao em: {video_path}")
+
+                    if video_writer is not None:
+                        video_writer.write(annotated)
+
+                    if estado_antes in (VagaState.PENDENTE, VagaState.OCUPADA) and vaga.estado == VagaState.LIVRE:
+                        if video_writer is not None:
+                            video_writer.release()
+                            print(f"[{config.VAGA_ID}] Video da sessao salvo em: {video_path}")
+                            video_writer = None
+
+                if not args.headless:
+                    cv2.imshow("Vaga Rotativa", annotated)
+                    if cv2.waitKey(1) & 0xFF == ord("x"):
+                        break
     except KeyboardInterrupt:
         print("\nInterrompido (Ctrl+C).")
     finally:
         cap.release()
         cv2.destroyAllWindows()
+        if video_writer is not None:
+            video_writer.release()
+            print(f"[{config.VAGA_ID}] Video da sessao (interrompida) salvo em: {video_path}")
 
 
 if __name__ == "__main__":
