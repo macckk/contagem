@@ -376,6 +376,14 @@ sql/
   schema.sql             # schema do Supabase
   migrations/            # alteracoes incrementais no schema ja existente
 dashboard/                # app React (Vite) publicado no GitHub Pages
+vaga_rotativa/            # subprojeto Vaga Rotativa (ver secao propria abaixo)
+  config.py               # leitura do vaga_rotativa/.env (separado do .env da raiz)
+  zone_state.py           # maquina de estados livre/pendente/ocupada
+  supabase_client.py      # insert/update na tabela vaga_eventos
+  scripts/
+    calibrar_zonas.py      # calibracao das zonas (monitoramento/exclusao)
+    monitorar_vaga.py       # loop principal de monitoramento
+  sql/                     # schema.sql + migrations proprias da vaga_eventos
 ```
 
 ## Contando veículos além de pessoas
@@ -434,8 +442,10 @@ usando a chave `anon public` do Supabase (não a `service_role`).
 - **Vaga Rotativa**: o mesmo app tem um toggle "Contagem" / "Vaga Rotativa"
   no cabeçalho — a segunda aba (`dashboard/src/components/VagaRotativa.jsx`)
   mostra o status ao vivo da vaga (livre/ocupada), veículos nas últimas 24h,
-  tempo médio de permanência e o histórico de sessões, lendo a tabela
-  `vaga_eventos` (ver seção **Vaga Rotativa** abaixo).
+  tempo médio de permanência e o histórico de sessões **separado por dia**
+  (um cartão por dia — "Hoje", "Ontem" ou a data — com a contagem de
+  veículos daquele dia e sua própria tabela de entrada/saída/duração),
+  lendo a tabela `vaga_eventos` (ver seção **Vaga Rotativa** abaixo).
 
 ---
 
