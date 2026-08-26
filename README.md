@@ -531,16 +531,19 @@ com o DVR cair (retry a cada 5s), em vez de encerrar.
 
 ### Gravação de vídeo por sessão (`--gravar`)
 
-Útil para gerar exemplos de vídeo para a documentação. Assim que o estado
-sai de `livre` (o veículo entra na zona de monitoramento), começa a gravar
-em `vaga_rotativa/gravacoes/vaga_<VAGA_ID>_AAAAMMDD_HHMMSS.mp4` (com as
-zonas desenhadas, igual à janela de vídeo); o vídeo é fechado assim que o
-estado volta a `livre` — seja por uma saída real (`ocupada → livre`) ou por
-uma desistência (`pendente → livre`, quando o veículo só passou perto sem
-realmente estacionar). Funciona junto com `--headless` (grava sem abrir
-janela). `--fps-gravacao` (padrão `12.0`) ajusta o FPS do arquivo — regule
-perto do FPS real mostrado no console, senão o vídeo sai acelerado ou em
-câmera lenta (mesmo cuidado de `--gravar` em `scripts/02_tracking.py`).
+Útil para gerar exemplos de vídeo para a documentação. Só grava sessões
+realmente confirmadas: começa a gravar exatamente na transição
+`pendente → ocupada` (quando os `TEMPO_CONFIRMAR_ESTACIONADO_SEGUNDOS`
+de presença contínua são atingidos), não na simples entrada na zona — um
+veículo que só passa perto sem estacionar (`pendente → livre`) nunca gera
+vídeo. Salva em
+`vaga_rotativa/gravacoes/vaga_<VAGA_ID>_AAAAMMDD_HHMMSS.mp4` (com as zonas
+desenhadas, igual à janela de vídeo) e fecha o arquivo assim que o veículo
+sai de verdade (`ocupada → livre`). Funciona junto com `--headless` (grava
+sem abrir janela). `--fps-gravacao` (padrão `12.0`) ajusta o FPS do
+arquivo — regule perto do FPS real mostrado no console, senão o vídeo sai
+acelerado ou em câmera lenta (mesmo cuidado de `--gravar` em
+`scripts/02_tracking.py`).
 
 ## Banco de dados
 

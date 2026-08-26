@@ -212,8 +212,11 @@ def main():
                 )
 
                 if args.gravar:
-                    if estado_antes == VagaState.LIVRE and vaga.estado == VagaState.PENDENTE:
-                        nome_arquivo = f"vaga_{config.VAGA_ID}_{time.strftime('%Y%m%d_%H%M%S')}.mp4"
+                    if estado_antes == VagaState.PENDENTE and vaga.estado == VagaState.OCUPADA:
+                        # Usa o horario real de entrada (pendente_desde), nao o momento da
+                        # confirmacao (ate tempo_confirmar segundos depois).
+                        timestamp_nome = time.strftime("%Y%m%d_%H%M%S", time.localtime(vaga.entrada_ts))
+                        nome_arquivo = f"vaga_{config.VAGA_ID}_{timestamp_nome}.mp4"
                         video_path = gravacoes_dir / nome_arquivo
                         altura, largura = annotated.shape[:2]
                         fourcc = cv2.VideoWriter_fourcc(*"mp4v")
@@ -223,7 +226,7 @@ def main():
                     if video_writer is not None:
                         video_writer.write(annotated)
 
-                    if estado_antes in (VagaState.PENDENTE, VagaState.OCUPADA) and vaga.estado == VagaState.LIVRE:
+                    if estado_antes == VagaState.OCUPADA and vaga.estado == VagaState.LIVRE:
                         if video_writer is not None:
                             video_writer.release()
                             print(f"[{config.VAGA_ID}] Video da sessao salvo em: {video_path}")
