@@ -547,11 +547,19 @@ acelerado ou em câmera lenta (mesmo cuidado de `--gravar` em
 
 ## Banco de dados
 
-Rode `vaga_rotativa/sql/schema.sql` no SQL editor do Supabase (mesmo
-projeto do app de contagem) para criar a tabela `vaga_eventos`, e depois
-`vaga_rotativa/sql/001_rls_leitura_publica.sql` para liberar leitura
-pública (`SELECT`) para o dashboard, igual ao padrão já usado em
-`sql/migrations/004_rls_leitura_publica.sql`.
+Rode em ordem no SQL editor do Supabase (mesmo projeto do app de contagem):
+
+1. `vaga_rotativa/sql/schema.sql` — cria a tabela `vaga_eventos`.
+2. `vaga_rotativa/sql/001_rls_leitura_publica.sql` — libera leitura pública
+   (`SELECT`) para o dashboard, igual ao padrão já usado em
+   `sql/migrations/004_rls_leitura_publica.sql`.
+3. `vaga_rotativa/sql/002_excluir_duracao_curta.sql` — cria um trigger que
+   **exclui automaticamente** qualquer registro assim que a saída é gravada
+   com `duracao_segundos < 50` (ruído de detecção — carro passando devagar,
+   moto, pedestre classificado errado — que passou pelo
+   `TEMPO_CONFIRMAR_ESTACIONADO_SEGUNDOS` por pouco, mas não foi uma
+   ocupação real). Roda no banco, sem depender do script Python estar de
+   pé. Ajuste o limiar direto no SQL (`< 50`) se quiser outro valor.
 
 Colunas: `vaga_id`, `entrada`/`saida` (`timestamptz`), `duracao_segundos`,
 `excedeu_limite` (bool), `imagem_path` (caminho local da foto, se houve
