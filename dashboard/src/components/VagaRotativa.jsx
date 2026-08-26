@@ -9,6 +9,31 @@ function formatDuracao(segundos) {
   return `${min}min ${seg}s`;
 }
 
+function formatHora(iso) {
+  return new Date(iso).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+}
+
+function agruparPorDia(eventos) {
+  const grupos = new Map();
+  for (const e of eventos) {
+    const d = new Date(e.entrada);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    if (!grupos.has(key)) grupos.set(key, { key, data: d, eventos: [] });
+    grupos.get(key).eventos.push(e);
+  }
+  return Array.from(grupos.values()).sort((a, b) => b.key.localeCompare(a.key));
+}
+
+function formatDiaLabel(data) {
+  const hoje = new Date();
+  const ontem = new Date(hoje);
+  ontem.setDate(hoje.getDate() - 1);
+  const mesmoDia = (a, b) => a.toDateString() === b.toDateString();
+  if (mesmoDia(data, hoje)) return "Hoje";
+  if (mesmoDia(data, ontem)) return "Ontem";
+  return data.toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" });
+}
+
 export default function VagaRotativa() {
   const [eventos, setEventos] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -58,6 +83,7 @@ export default function VagaRotativa() {
     const mediaSegundos = concluidas.reduce((acc, e) => acc + (e.duracao_segundos ?? 0), 0) / concluidas.length;
     return mediaSegundos / 60;
   }, [concluidas]);
+  const porDia = useMemo(() => agruparPorDia(eventos), [eventos]);
 
   return (
     <div>
@@ -112,46 +138,59 @@ export default function VagaRotativa() {
         </div>
       </div>
 
-      <div className="glass-card table-card">
-        <p className="chart-sub" style={{ margin: "0 0 8px" }}>
-          Histórico de ocupação (últimos 7 dias)
-        </p>
-        {eventos.length === 0 ? (
-          <div className="empty-state">Nenhum evento registrado nos últimos 7 dias.</div>
-        ) : (
-          <div className="table-scroll">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Entrada</th>
-                  <th>Saída</th>
-                  <th>Duração</th>
-                  <th>Excedeu 15min?</th>
-                </tr>
-              </thead>
-              <tbody>
-                {eventos.slice(0, 50).map((e) => (
-                  <tr key={e.id}>
-                    <td>{new Date(e.entrada).toLocaleString("pt-BR")}</td>
-                    <td>{e.saida ? new Date(e.saida).toLocaleString("pt-BR") : "— (ocupada)"}</td>
-                    <td>
-                      {e.duracao_segundos != null
-                        ? formatDuracao(e.duracao_segundos)
-                        : formatDuracao((agora - new Date(e.entrada).getTime()) / 1000)}
-                    </td>
-                    <td>{e.excedeu_limite ? "Sim" : "Não"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {eventos.length > 50 && (
-              <p className="chart-sub" style={{ marginTop: 8 }}>
-                Mostrando os 50 mais recentes de {eventos.length} eventos.
+      <p className="chart-sub" style={{ margin: "0 0 12px" }}>
+        Histórico de ocupação, separado por dia (últimos 7 dias)
+      </p>
+
+      {porDia.length === 0 ? (
+        <div className="glass-card empty-state">Nenhum evento registrado nos últimos 7 dias.</div>
+      ) : (
+        porDia.map((grupo) => (
+          <div className="glass-card table-card" key={grupo.key} style={{ marginBottom: 16 }}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "baseline",
+                marginBottom: 8,
+              }}
+            >
+              <p style={{ margin: 0, fontWeight: 600, color: "var(--text-primary)" }}>
+                {formatDiaLabel(grupo.data)}
               </p>
-            )}
+              <p className="chart-sub" style={{ margin: 0 }}>
+                {grupo.eventos.length} veículo{grupo.eventos.length !== 1 ? "s" : ""}
+              </p>
+            </div>
+            <div className="table-scroll">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Entrada</th>
+                    <th>Saída</th>
+                    <th>Duração</th>
+                    <th>Excedeu 15min?</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {grupo.eventos.map((e) => (
+                    <tr key={e.id}>
+                      <td>{formatHora(e.entrada)}</td>
+                      <td>{e.saida ? formatHora(e.saida) : "— (ocupada)"}</td>
+                      <td>
+                        {e.duracao_segundos != null
+                          ? formatDuracao(e.duracao_segundos)
+                          : formatDuracao((agora - new Date(e.entrada).getTime()) / 1000)}
+                      </td>
+                      <td>{e.excedeu_limite ? "Sim" : "Não"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
-        )}
-      </div>
+        ))
+      )}
     </div>
   );
 }
